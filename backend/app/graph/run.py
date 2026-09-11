@@ -5,10 +5,11 @@ def main() -> None:
     graph = build_graph()
 
     initial_state = {
-        "user_request": "Build a todo application",
-        "current_agent": "",
-        "status": "started",
-    }
+    "user_request": "Build a todo application where users can create, edit, delete, and mark tasks as completed.",
+    "requirements": "",
+    "current_agent": "",
+    "status": "started",
+}
 
     final_state = graph.invoke(initial_state)
 
