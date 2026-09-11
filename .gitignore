@@ -4,9 +4,13 @@ __pycache__/
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
 # Virtual environments
-.venv
+.venv/
+
+# Environment variables and secrets
 .env
-.env
+
+# CodeForge generated workspaces
+sandbox/
