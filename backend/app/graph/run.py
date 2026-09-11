@@ -7,6 +7,7 @@ def main() -> None:
     initial_state = {
     "user_request": "Build a todo application where users can create, edit, delete, and mark tasks as completed.",
     "requirements": "",
+    "architecture": "",
     "current_agent": "",
     "status": "started",
 }
