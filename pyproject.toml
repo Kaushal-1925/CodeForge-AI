@@ -24,3 +24,6 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]

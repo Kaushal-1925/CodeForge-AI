@@ -29,6 +29,7 @@ def test_router(state: CodeForgeState) -> str:
         return "max_iterations"
 
     return "failed"
+test_router.__test__ = False
 
 
 def increment_iteration(state: CodeForgeState) -> CodeForgeState:
