@@ -16,8 +16,10 @@ def main() -> None:
             "delete, and mark tasks as completed."
         ),
         "requirements": "",
-        "architecture": "",
-        "current_task": """
+"architecture": "",
+"tasks": [],
+"current_task_index": 0,
+"current_task": """
 Implement the SQLAlchemy Task model for the todo application.
 
 The Task model MUST:

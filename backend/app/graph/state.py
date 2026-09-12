@@ -5,6 +5,8 @@ class CodeForgeState(TypedDict):
     user_request: str
     requirements: str
     architecture: str
+    tasks: list[str]
+    current_task_index: int
     current_task: str
     files: dict[str, str]
     validation_errors: list[str]

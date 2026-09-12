@@ -12,6 +12,7 @@ model = ChatGroq(
 
 
 def developer_agent(state: CodeForgeState) -> CodeForgeState:
+    test_results = state["test_results"]
     response = model.invoke(
         f"""
 You are the Developer Agent of CodeForge AI.
@@ -23,6 +24,20 @@ CURRENT TASK
 ==================================================
 
 {state["current_task"]}
+
+==================================================
+PREVIOUS TEST RESULTS
+==================================================
+
+{test_results}
+
+If previous test results exist and indicate failure, use them to
+identify what is wrong with the previous implementation and fix it.
+
+If previous test results are empty, this is the first implementation
+attempt.
+
+Do not ignore previous test failures.
 
 ==================================================
 EXISTING CODEFORGE PROJECT
