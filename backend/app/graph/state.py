@@ -15,3 +15,4 @@ class CodeForgeState(TypedDict):
     current_agent: str
     status: str
     iteration: int
+    retry_count: int

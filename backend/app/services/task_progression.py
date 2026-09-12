@@ -8,6 +8,7 @@ def advance_to_next_task(state: CodeForgeState) -> CodeForgeState:
 
     # Each task gets a fresh retry budget and fresh execution results.
     state["iteration"] = 0
+    state["retry_count"] = 0
     state["test_results"] = {}
     state["validation_errors"] = []
 

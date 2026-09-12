@@ -42,15 +42,42 @@ CURRENT TASK
 PREVIOUS TEST RESULTS
 ==================================================
 
-{test_results}
+If previous test results exist and indicate failure, use the structured
+failure information below to diagnose and fix the current task.
 
-If previous test results exist and indicate failure, use them to
-identify what is wrong with the previous implementation and fix it.
+Failure type:
+{test_results.get("failure_type")}
+
+Failure summary:
+{test_results.get("summary")}
+
+Failure details:
+{test_results.get("details")}
+
+Raw test output:
+{test_results.get("stdout")}
+
+Raw test errors:
+{test_results.get("stderr")}
 
 If previous test results are empty, this is the first implementation
 attempt.
 
 Do not ignore previous test failures.
+
+If previous tests failed, fix the failure before adding unrelated
+functionality.
+
+Use the failure type and summary as diagnostic hints, but inspect the
+existing workspace code before deciding what to change.
+
+Do not modify tests merely to make them pass unless the CURRENT TASK
+explicitly requires changing the test behavior.
+
+Preserve working functionality from previous tasks.
+
+When fixing a failure, generate the complete contents of every
+modified file.
 
 ==================================================
 CURRENT GENERATED PROJECT
@@ -73,14 +100,23 @@ EXISTING CODEFORGE PROJECT
 The project already contains:
 
 backend/app/main.py
+
 backend/app/config.py
+
 backend/app/database/base.py
+
 backend/app/database/session.py
+
 backend/app/database/dependencies.py
+
 backend/app/models/
+
 backend/app/schemas/
+
 backend/app/api/
+
 backend/app/services/
+
 backend/tests/
 
 ==================================================
@@ -176,6 +212,7 @@ Generate only the files required to complete the CURRENT TASK.
 Every generated file MUST use exactly this format:
 
 FILE: backend/app/example.py
+
 BEGIN_FILE
 <complete file contents>
 END_FILE
@@ -200,3 +237,6 @@ Do not claim that tests pass.
     state["status"] = "developer_completed"
 
     return state
+
+
+developer_agent.__test__ = False

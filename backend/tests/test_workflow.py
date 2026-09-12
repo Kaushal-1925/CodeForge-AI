@@ -1,5 +1,5 @@
-from app.graph.workflow import task_progression_router
 from pathlib import Path
+
 from app.graph.workflow import (
     MAX_ITERATIONS,
     architecture_validation_agent,
@@ -10,6 +10,7 @@ from app.graph.workflow import (
     test_router,
     validation_router,
 )
+
 
 def test_artifact_validation_passes_for_valid_artifacts(
     tmp_path: Path,
@@ -43,9 +44,11 @@ def test_artifact_validation_passes_for_valid_artifacts(
     result = artifact_validation_agent(state)
 
     assert result["validation_errors"] == []
+
     assert result["status"] == (
         "artifact_validation_passed"
     )
+
     assert result["current_agent"] == (
         "artifact_validator"
     )
@@ -66,22 +69,30 @@ def test_artifact_validation_fails_for_missing_artifact(
     assert result["status"] == (
         "artifact_validation_failed"
     )
+
     assert result["current_agent"] == (
         "artifact_validator"
     )
+
     assert result["validation_errors"] == [
         "Generated artifact was not written: "
         "backend/app/missing.py"
     ]
+
+
 def test_validation_router_passes_when_no_errors():
-    state = {"validation_errors": []}
+    state = {
+        "validation_errors": []
+    }
 
     assert validation_router(state) == "passed"
 
 
 def test_validation_router_fails_when_errors_exist():
     state = {
-        "validation_errors": ["Invalid generated file"]
+        "validation_errors": [
+            "Invalid generated file"
+        ]
     }
 
     assert validation_router(state) == "failed"
@@ -102,10 +113,14 @@ def test_architecture_validation_passes_for_valid_architecture():
     result = architecture_validation_agent(state)
 
     assert result["validation_errors"] == []
+
     assert result["status"] == (
         "architecture_validation_passed"
     )
-    assert result["current_agent"] == "architecture_validator"
+
+    assert result["current_agent"] == (
+        "architecture_validator"
+    )
 
 
 def test_architecture_validation_fails_for_invalid_architecture():
@@ -137,7 +152,10 @@ def test_architecture_validation_fails_for_invalid_architecture():
     assert result["status"] == (
         "architecture_validation_failed"
     )
-    assert result["current_agent"] == "architecture_validator"
+
+    assert result["current_agent"] == (
+        "architecture_validator"
+    )
 
 
 def test_task_validation_passes_for_valid_tasks():
@@ -157,7 +175,9 @@ def test_task_validation_passes_for_valid_tasks():
     result = task_validation_agent(state)
 
     assert result["validation_errors"] == []
+
     assert result["status"] == "task_validation_passed"
+
     assert result["current_agent"] == "task_validator"
 
 
@@ -171,7 +191,9 @@ def test_task_validation_fails_for_invalid_tasks():
     result = task_validation_agent(state)
 
     assert result["status"] == "task_validation_failed"
+
     assert result["current_agent"] == "task_validator"
+
     assert len(result["validation_errors"]) == 2
 
 
@@ -185,13 +207,17 @@ def test_task_validation_fails_for_empty_tasks():
     assert result["validation_errors"] == [
         "No tasks were generated."
     ]
+
     assert result["status"] == "task_validation_failed"
 
 
 def test_test_router_passes_when_tests_pass():
     state = {
-        "test_results": {"status": "passed"},
+        "test_results": {
+            "status": "passed"
+        },
         "iteration": 1,
+        "retry_count": 1,
     }
 
     assert test_router(state) == "passed"
@@ -204,6 +230,7 @@ def test_test_router_retries_when_tests_fail():
             "stdout": "1 failed",
         },
         "iteration": 1,
+        "retry_count": 1,
     }
 
     assert test_router(state) == "failed"
@@ -211,19 +238,26 @@ def test_test_router_retries_when_tests_fail():
 
 def test_test_router_stops_at_max_iterations():
     state = {
-        "test_results": {"status": "failed"},
+        "test_results": {
+            "status": "failed"
+        },
         "iteration": MAX_ITERATIONS,
+        "retry_count": MAX_ITERATIONS,
     }
 
     assert test_router(state) == "max_iterations"
 
 
 def test_increment_iteration():
-    state = {"iteration": 0}
+    state = {
+        "iteration": 0,
+        "retry_count": 0,
+    }
 
     result = increment_iteration(state)
 
     assert result["iteration"] == 1
+    assert result["retry_count"] == 1
 
 
 def test_task_progression_router_moves_to_next_task():
@@ -240,3 +274,76 @@ def test_task_progression_router_ends_when_all_tasks_complete():
     }
 
     assert task_progression_router(state) == "completed"
+
+
+def test_failed_tests_route_back_to_developer():
+    state = {
+        "test_results": {
+            "status": "failed",
+            "failure_type": "assertion_failure",
+            "summary": "A test assertion failed.",
+        },
+        "iteration": 1,
+        "retry_count": 1,
+    }
+
+    assert test_router(state) == "failed"
+
+    incremented_state = increment_iteration(state)
+
+    assert incremented_state["retry_count"] == 2
+    assert incremented_state["iteration"] == 2
+
+    assert test_router(incremented_state) == "failed"
+
+
+def test_passed_tests_route_to_task_progression():
+    state = {
+        "test_results": {
+            "status": "passed",
+            "failure_type": None,
+            "summary": "All tests passed.",
+        },
+        "iteration": 2,
+        "retry_count": 1,
+    }
+
+    assert test_router(state) == "passed"
+
+
+def test_failed_tests_stop_after_max_iterations():
+    state = {
+        "test_results": {
+            "status": "failed",
+            "failure_type": "assertion_failure",
+            "summary": "A test assertion failed.",
+        },
+        "iteration": MAX_ITERATIONS,
+        "retry_count": MAX_ITERATIONS,
+    }
+
+    assert test_router(state) == "max_iterations"
+
+
+def test_test_router_allows_retry_before_max_iterations():
+    state = {
+        "test_results": {
+            "status": "failed",
+        },
+        "iteration": 4,
+        "retry_count": 4,
+    }
+
+    assert test_router(state) == "failed"
+
+
+def test_test_router_stops_exactly_at_max_retries():
+    state = {
+        "test_results": {
+            "status": "failed",
+        },
+        "iteration": MAX_ITERATIONS,
+        "retry_count": MAX_ITERATIONS,
+    }
+
+    assert test_router(state) == "max_iterations"

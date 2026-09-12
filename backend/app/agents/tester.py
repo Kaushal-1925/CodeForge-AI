@@ -1,21 +1,29 @@
 from pathlib import Path
 
 from app.graph.state import CodeForgeState
+from app.services.test_result_analyzer import analyze_test_results
 from app.services.test_runner import run_tests
 
 
 def tester_agent(state: CodeForgeState) -> CodeForgeState:
     workspace = Path(state["workspace"])
 
-    results = run_tests(workspace)
+    raw_results = run_tests(workspace)
 
-    state["test_results"] = results
+    analyzed_results = analyze_test_results(raw_results)
+
+    state["test_results"] = {
+        **raw_results,
+        **analyzed_results,
+    }
+
     state["current_agent"] = "tester"
 
-    if results["status"] == "passed":
+    if analyzed_results["status"] == "passed":
         state["status"] = "tests_passed"
     else:
         state["status"] = "tests_failed"
 
     return state
 
+tester_agent.__test__ = False

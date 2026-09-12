@@ -35,9 +35,13 @@ def architecture_validation_agent(
     state["current_agent"] = "architecture_validator"
 
     if errors:
-        state["status"] = "architecture_validation_failed"
+        state["status"] = (
+            "architecture_validation_failed"
+        )
     else:
-        state["status"] = "architecture_validation_passed"
+        state["status"] = (
+            "architecture_validation_passed"
+        )
 
     return state
 
@@ -74,9 +78,13 @@ def artifact_validation_agent(
     state["current_agent"] = "artifact_validator"
 
     if errors:
-        state["status"] = "artifact_validation_failed"
+        state["status"] = (
+            "artifact_validation_failed"
+        )
     else:
-        state["status"] = "artifact_validation_passed"
+        state["status"] = (
+            "artifact_validation_passed"
+        )
 
     return state
 
@@ -96,7 +104,7 @@ def test_router(state: CodeForgeState) -> str:
     if test_results.get("status") == "passed":
         return "passed"
 
-    if state["iteration"] >= MAX_ITERATIONS:
+    if state["retry_count"] >= MAX_ITERATIONS:
         return "max_iterations"
 
     return "failed"
@@ -109,6 +117,17 @@ def increment_iteration(
     state: CodeForgeState,
 ) -> CodeForgeState:
     state["iteration"] += 1
+    state["retry_count"] += 1
+
+    return state
+
+
+def mark_max_retries_reached(
+    state: CodeForgeState,
+) -> CodeForgeState:
+    state["current_agent"] = "workflow"
+    state["status"] = "max_retries_reached"
+
     return state
 
 
@@ -173,6 +192,11 @@ def build_graph():
     graph.add_node(
         "increment_iteration",
         increment_iteration,
+    )
+
+    graph.add_node(
+        "max_retries_reached",
+        mark_max_retries_reached,
     )
 
     graph.add_edge(
@@ -247,7 +271,7 @@ def build_graph():
         {
             "passed": "task_progression",
             "failed": "increment_iteration",
-            "max_iterations": END,
+            "max_iterations": "max_retries_reached",
         },
     )
 
@@ -263,6 +287,11 @@ def build_graph():
     graph.add_edge(
         "increment_iteration",
         "developer",
+    )
+
+    graph.add_edge(
+        "max_retries_reached",
+        END,
     )
 
     return graph.compile()

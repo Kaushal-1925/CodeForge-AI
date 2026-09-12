@@ -48,6 +48,7 @@ migrations, or configuration.
         "current_agent": "",
         "status": "started",
         "iteration": 0,
+        "retry_count": 0,
     }
 
     final_state = graph.invoke(initial_state)
