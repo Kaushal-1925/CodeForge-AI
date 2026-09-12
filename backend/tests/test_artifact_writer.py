@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.services.artifact_writer import (
+from app.agents.artifact_writer import (
     write_generated_files,
 )
 
@@ -84,3 +84,32 @@ def test_generated_file_cannot_escape_workspace(
         assert False, "Expected ValueError"
     except ValueError as exc:
         assert "escapes workspace" in str(exc)
+def test_template_does_not_overwrite_existing_workspace_file(tmp_path: Path):
+    workspace = tmp_path / "workspace"
+
+    existing_file = (
+        workspace
+        / "backend"
+        / "app"
+        / "main.py"
+    )
+
+    existing_file.parent.mkdir(parents=True, exist_ok=True)
+
+    existing_content = """
+from fastapi import FastAPI
+
+app = FastAPI(title="My Generated Application")
+"""
+
+    existing_file.write_text(
+        existing_content,
+        encoding="utf-8",
+    )
+
+    write_generated_files(
+        {},
+        workspace,
+    )
+
+    assert existing_file.read_text(encoding="utf-8") == existing_content
