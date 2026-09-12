@@ -1,8 +1,11 @@
+from pathlib import Path
+
 from langchain_groq import ChatGroq
 
 from app.config import settings
 from app.graph.state import CodeForgeState
 from app.services.file_parser import parse_generated_files
+from app.services.workspace_reader import read_workspace_files
 
 
 model = ChatGroq(
@@ -13,6 +16,16 @@ model = ChatGroq(
 
 def developer_agent(state: CodeForgeState) -> CodeForgeState:
     test_results = state["test_results"]
+
+    workspace_files = read_workspace_files(
+        Path(state["workspace"])
+    )
+
+    existing_project = "\n\n".join(
+        f"FILE: {path}\n{content}"
+        for path, content in workspace_files.items()
+    )
+
     response = model.invoke(
         f"""
 You are the Developer Agent of CodeForge AI.
@@ -38,6 +51,20 @@ If previous test results are empty, this is the first implementation
 attempt.
 
 Do not ignore previous test failures.
+
+==================================================
+CURRENT GENERATED PROJECT
+==================================================
+
+The following files already exist in the generated project workspace.
+
+Treat these files as authoritative.
+
+Build on them instead of recreating them.
+
+{existing_project}
+
+If the workspace is empty, this is the first implementation task.
 
 ==================================================
 EXISTING CODEFORGE PROJECT
@@ -165,7 +192,10 @@ Do not claim that tests pass.
 """
     )
 
-    state["files"] = parse_generated_files(str(response.content))
+    state["files"] = parse_generated_files(
+        str(response.content)
+    )
+
     state["current_agent"] = "developer"
     state["status"] = "developer_completed"
 
