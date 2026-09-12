@@ -9,6 +9,7 @@ from app.agents.tester import tester_agent
 from app.agents.validator import validator_agent
 from app.graph.state import CodeForgeState
 from app.services.architecture_validator import validate_architecture
+from app.services.artifact_validator import validate_written_artifacts
 from app.services.task_progression import advance_to_next_task
 from app.services.task_validator import validate_tasks
 
@@ -55,6 +56,27 @@ def task_validation_agent(
         state["status"] = "task_validation_failed"
     else:
         state["status"] = "task_validation_passed"
+
+    return state
+
+
+def artifact_validation_agent(
+    state: CodeForgeState,
+) -> CodeForgeState:
+    from pathlib import Path
+
+    errors = validate_written_artifacts(
+        state["files"],
+        Path(state["workspace"]),
+    )
+
+    state["validation_errors"] = errors
+    state["current_agent"] = "artifact_validator"
+
+    if errors:
+        state["status"] = "artifact_validation_failed"
+    else:
+        state["status"] = "artifact_validation_passed"
 
     return state
 
@@ -134,6 +156,11 @@ def build_graph():
     )
 
     graph.add_node(
+        "artifact_validator",
+        artifact_validation_agent,
+    )
+
+    graph.add_node(
         "tester",
         tester_agent,
     )
@@ -202,7 +229,16 @@ def build_graph():
 
     graph.add_edge(
         "artifact_writer",
-        "tester",
+        "artifact_validator",
+    )
+
+    graph.add_conditional_edges(
+        "artifact_validator",
+        validation_router,
+        {
+            "passed": "tester",
+            "failed": END,
+        },
     )
 
     graph.add_conditional_edges(
