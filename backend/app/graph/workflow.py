@@ -7,6 +7,7 @@ from app.agents.manager import manager_agent
 from app.agents.tester import tester_agent
 from app.agents.validator import validator_agent
 from app.graph.state import CodeForgeState
+from app.services.architecture_validator import validate_architecture
 
 
 MAX_ITERATIONS = 5
@@ -17,6 +18,19 @@ def validation_router(state: CodeForgeState) -> str:
         return "failed"
 
     return "passed"
+
+def architecture_validation_agent(state: CodeForgeState) -> CodeForgeState:
+    errors = validate_architecture(state["architecture"])
+
+    state["validation_errors"] = errors
+    state["current_agent"] = "architecture_validator"
+
+    if errors:
+        state["status"] = "architecture_validation_failed"
+    else:
+        state["status"] = "architecture_validation_passed"
+
+    return state
 
 
 def test_router(state: CodeForgeState) -> str:
@@ -42,6 +56,10 @@ def build_graph():
 
     graph.add_node("manager", manager_agent)
     graph.add_node("architect", architect_agent)
+    graph.add_node(
+    "architecture_validator",
+    architecture_validation_agent,
+)
     graph.add_node("developer", developer_agent)
     graph.add_node("validator", validator_agent)
     graph.add_node("artifact_writer", artifact_writer_agent)
@@ -50,7 +68,15 @@ def build_graph():
 
     graph.add_edge(START, "manager")
     graph.add_edge("manager", "architect")
-    graph.add_edge("architect", "developer")
+    graph.add_edge("architect", "architecture_validator")
+    graph.add_conditional_edges(
+    "architecture_validator",
+    validation_router,
+    {
+        "passed": "developer",
+        "failed": END,
+    },
+)
     graph.add_edge("developer", "validator")
 
     graph.add_conditional_edges(
