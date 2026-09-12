@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config, pool
 from app.config import settings
 from app.database.base import Base
 from app.models.project import Project
-
+from app.models.workflow_run import WorkflowRun
 
 config = context.config
 
