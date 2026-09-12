@@ -71,3 +71,21 @@ def test_all_tasks_completed():
     assert result["current_task"] == ""
     assert result["status"] == "all_tasks_completed"
     assert result["current_agent"] == "task_progression"
+def test_new_task_resets_retry_state():
+    state = make_state()
+
+    state["iteration"] = 4
+    state["test_results"] = {
+        "status": "passed",
+        "output": "Previous task passed",
+    }
+    state["validation_errors"] = [
+        "Previous task validation error"
+    ]
+
+    result = advance_to_next_task(state)
+
+    assert result["current_task_index"] == 1
+    assert result["iteration"] == 0
+    assert result["test_results"] == {}
+    assert result["validation_errors"] == []

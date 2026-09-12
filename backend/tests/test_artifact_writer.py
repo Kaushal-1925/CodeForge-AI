@@ -4,7 +4,6 @@ from app.agents.artifact_writer import (
     write_generated_files,
 )
 
-
 def test_template_is_copied(tmp_path: Path):
     workspace = tmp_path / "workspace"
 
@@ -32,6 +31,10 @@ def test_template_is_copied(tmp_path: Path):
         / "base.py"
     ).exists()
 
+    assert (
+        workspace
+        / "pyproject.toml"
+    ).exists()
 
 def test_generated_files_are_written(
     tmp_path: Path,

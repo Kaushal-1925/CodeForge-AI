@@ -1,12 +1,15 @@
 from app.graph.state import CodeForgeState
 
 
-def advance_to_next_task(
-    state: CodeForgeState,
-) -> CodeForgeState:
+def advance_to_next_task(state: CodeForgeState) -> CodeForgeState:
     next_index = state["current_task_index"] + 1
 
     state["current_task_index"] = next_index
+
+    # Each task gets a fresh retry budget and fresh execution results.
+    state["iteration"] = 0
+    state["test_results"] = {}
+    state["validation_errors"] = []
 
     if next_index < len(state["tasks"]):
         state["current_task"] = state["tasks"][next_index]
