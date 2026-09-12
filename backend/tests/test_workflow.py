@@ -6,29 +6,6 @@ from app.graph.workflow import (
     validation_router,
 )
 
-def test_validation_router_passes_when_no_errors():
-    state = {
-        "validation_errors": [],
-    }
-
-    assert validation_router(state) == "passed"
-
-
-def test_validation_router_fails_when_errors_exist():
-    state = {
-        "validation_errors": ["Invalid generated file"],
-    }
-
-    assert validation_router(state) == "failed"
-
-from app.graph.workflow import (
-    MAX_ITERATIONS,
-    architecture_validation_agent,
-    increment_iteration,
-    test_router,
-    validation_router,
-)
-
 
 def test_validation_router_passes_when_no_errors():
     state = {
@@ -76,7 +53,19 @@ def test_architecture_validation_fails_for_invalid_architecture():
 
     result = architecture_validation_agent(state)
 
-    assert result["validation_errors"]
+    assert "SQLite is not allowed. CodeForge uses PostgreSQL." in result[
+        "validation_errors"
+    ]
+
+    assert "asyncpg is not allowed. Use the existing psycopg driver." in result[
+        "validation_errors"
+    ]
+
+    assert (
+        "Flask is not allowed. The approved backend framework is FastAPI."
+        in result["validation_errors"]
+    )
+
     assert result["status"] == "architecture_validation_failed"
     assert result["current_agent"] == "architecture_validator"
 
@@ -121,4 +110,3 @@ def test_increment_iteration():
     result = increment_iteration(state)
 
     assert result["iteration"] == 1
-
