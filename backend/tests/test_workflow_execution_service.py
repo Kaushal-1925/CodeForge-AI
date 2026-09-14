@@ -1,13 +1,16 @@
+import shutil
 from uuid import uuid4
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.database.base import Base
 from app.models.project import Project
 from app.models.workflow_run import WorkflowRun
 from app.services.workflow_execution_service import (
+    build_initial_state,
     execute_workflow_run,
+    run_workflow_in_background,
     start_workflow_run,
 )
 
@@ -95,6 +98,69 @@ def test_start_workflow_run_rejects_unknown_project():
         engine.dispose()
 
 
+def test_build_initial_state():
+    engine = create_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+    )
+
+    Base.metadata.create_all(bind=engine)
+
+    workspace = None
+
+    try:
+        with Session(engine) as db:
+            project = Project(
+                name="Initial State Project",
+            )
+
+            db.add(project)
+            db.commit()
+            db.refresh(project)
+
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a test application.",
+            )
+
+            state = build_initial_state(
+                workflow_run
+            )
+
+            workspace = state["workspace"]
+
+            assert state["user_request"] == (
+                "Build a test application."
+            )
+            assert state["requirements"] == ""
+            assert state["architecture"] == ""
+            assert state["tasks"] == []
+            assert state["current_task_index"] == 0
+            assert state["current_task"] == ""
+            assert state["files"] == {}
+            assert state["validation_errors"] == []
+            assert state["test_results"] == {}
+            assert state["current_agent"] == ""
+            assert state["status"] == "started"
+            assert state["iteration"] == 0
+            assert state["retry_count"] == 0
+
+            assert workspace.endswith(
+                str(workflow_run.id)
+            )
+
+    finally:
+        if workspace is not None:
+            shutil.rmtree(
+                workspace,
+                ignore_errors=True,
+            )
+
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
 def test_execute_workflow_run_completes_successfully():
     engine = create_engine(
         TEST_DATABASE_URL,
@@ -112,6 +178,12 @@ def test_execute_workflow_run_completes_successfully():
             db.add(project)
             db.commit()
             db.refresh(project)
+
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a test application.",
+            )
 
             final_state = {
                 "user_request": "Build a test application.",
@@ -138,27 +210,32 @@ def test_execute_workflow_run_completes_successfully():
                         "task_progression": final_state,
                     }
 
-            workflow_run, returned_state = (
+            returned_run, returned_state = (
                 execute_workflow_run(
                     db=db,
-                    project_id=project.id,
+                    workflow_run_id=workflow_run.id,
                     graph=FakeGraph(),
                     initial_state=final_state,
                 )
             )
 
             assert returned_state == final_state
-            assert workflow_run.project_id == project.id
-            assert workflow_run.user_request == (
+            assert returned_run.id == workflow_run.id
+            assert returned_run.project_id == project.id
+            assert returned_run.user_request == (
                 "Build a test application."
             )
-            assert workflow_run.status == "completed"
-            assert workflow_run.current_agent == (
+            assert returned_run.status == "completed"
+            assert returned_run.current_agent == (
                 "task_progression"
             )
-            assert workflow_run.current_task == ""
-            assert workflow_run.iteration == 0
-            assert workflow_run.completed_at is not None
+            assert returned_run.current_task == ""
+            assert returned_run.iteration == 0
+            assert returned_run.completed_at is not None
+
+            runs = db.query(WorkflowRun).all()
+
+            assert len(runs) == 1
 
     finally:
         Base.metadata.drop_all(bind=engine)
@@ -182,6 +259,12 @@ def test_execute_workflow_run_persists_failure():
             db.add(project)
             db.commit()
             db.refresh(project)
+
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a test application.",
+            )
 
             final_state = {
                 "user_request": "Build a test application.",
@@ -208,25 +291,30 @@ def test_execute_workflow_run_persists_failure():
                         "task_validator": final_state,
                     }
 
-            workflow_run, returned_state = (
+            returned_run, returned_state = (
                 execute_workflow_run(
                     db=db,
-                    project_id=project.id,
+                    workflow_run_id=workflow_run.id,
                     graph=FakeGraph(),
                     initial_state=final_state,
                 )
             )
 
             assert returned_state == final_state
-            assert workflow_run.project_id == project.id
-            assert workflow_run.user_request == (
+            assert returned_run.id == workflow_run.id
+            assert returned_run.project_id == project.id
+            assert returned_run.user_request == (
                 "Build a test application."
             )
-            assert workflow_run.status == "failed"
-            assert workflow_run.current_agent == (
+            assert returned_run.status == "failed"
+            assert returned_run.current_agent == (
                 "task_validator"
             )
-            assert workflow_run.completed_at is None
+            assert returned_run.completed_at is None
+
+            runs = db.query(WorkflowRun).all()
+
+            assert len(runs) == 1
 
     finally:
         Base.metadata.drop_all(bind=engine)
@@ -250,6 +338,12 @@ def test_execute_workflow_run_marks_exception_as_failed():
             db.add(project)
             db.commit()
             db.refresh(project)
+
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a test application.",
+            )
 
             class FailingGraph:
                 def stream(self, state):
@@ -277,7 +371,7 @@ def test_execute_workflow_run_marks_exception_as_failed():
             try:
                 execute_workflow_run(
                     db=db,
-                    project_id=project.id,
+                    workflow_run_id=workflow_run.id,
                     graph=FailingGraph(),
                     initial_state=initial_state,
                 )
@@ -296,6 +390,7 @@ def test_execute_workflow_run_marks_exception_as_failed():
 
             stored_run = runs[0]
 
+            assert stored_run.id == workflow_run.id
             assert stored_run.project_id == project.id
             assert stored_run.user_request == (
                 "Build a test application."
@@ -325,6 +420,12 @@ def test_execute_workflow_run_persists_each_streamed_node():
             db.add(project)
             db.commit()
             db.refresh(project)
+
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a test application.",
+            )
 
             first_state = {
                 "current_agent": "manager",
@@ -366,26 +467,31 @@ def test_execute_workflow_run_persists_each_streamed_node():
                 "retry_count": 0,
             }
 
-            workflow_run, returned_state = (
+            returned_run, returned_state = (
                 execute_workflow_run(
                     db=db,
-                    project_id=project.id,
+                    workflow_run_id=workflow_run.id,
                     graph=FakeGraph(),
                     initial_state=initial_state,
                 )
             )
 
             assert returned_state == final_state
-            assert workflow_run.user_request == (
+            assert returned_run.id == workflow_run.id
+            assert returned_run.user_request == (
                 "Build a test application."
             )
-            assert workflow_run.status == "completed"
-            assert workflow_run.current_agent == "developer"
-            assert workflow_run.current_task == (
+            assert returned_run.status == "completed"
+            assert returned_run.current_agent == "developer"
+            assert returned_run.current_task == (
                 "Implement feature"
             )
-            assert workflow_run.iteration == 1
-            assert workflow_run.completed_at is not None
+            assert returned_run.iteration == 1
+            assert returned_run.completed_at is not None
+
+            runs = db.query(WorkflowRun).all()
+
+            assert len(runs) == 1
 
     finally:
         Base.metadata.drop_all(bind=engine)
@@ -410,6 +516,12 @@ def test_execute_workflow_run_updates_database_after_each_node():
             db.commit()
             db.refresh(project)
 
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a test application.",
+            )
+
             observed_states = []
 
             class FakeGraph:
@@ -423,9 +535,13 @@ def test_execute_workflow_run_updates_database_after_each_node():
                         }
                     }
 
-                    run = db.query(WorkflowRun).first()
+                    run = db.get(
+                        WorkflowRun,
+                        workflow_run.id,
+                    )
 
                     assert run is not None
+
                     observed_states.append(
                         (
                             run.current_agent,
@@ -444,9 +560,13 @@ def test_execute_workflow_run_updates_database_after_each_node():
                         }
                     }
 
-                    run = db.query(WorkflowRun).first()
+                    run = db.get(
+                        WorkflowRun,
+                        workflow_run.id,
+                    )
 
                     assert run is not None
+
                     observed_states.append(
                         (
                             run.current_agent,
@@ -465,8 +585,8 @@ def test_execute_workflow_run_updates_database_after_each_node():
                 "current_task": "",
                 "files": {},
                 "validation_errors": [],
-                "workspace": "/tmp/test-workspace",
                 "test_results": {},
+                "workspace": "/tmp/test-workspace",
                 "current_agent": "",
                 "status": "started",
                 "iteration": 0,
@@ -475,7 +595,7 @@ def test_execute_workflow_run_updates_database_after_each_node():
 
             execute_workflow_run(
                 db=db,
-                project_id=project.id,
+                workflow_run_id=workflow_run.id,
                 graph=FakeGraph(),
                 initial_state=initial_state,
             )
@@ -518,6 +638,12 @@ def test_execute_workflow_run_does_not_persist_none_as_string():
             db.commit()
             db.refresh(project)
 
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a test application.",
+            )
+
             final_state = {
                 "current_agent": None,
                 "current_task": None,
@@ -540,7 +666,6 @@ def test_execute_workflow_run_does_not_persist_none_as_string():
                 "current_task": "",
                 "files": {},
                 "validation_errors": [],
-                "workspace": "/tmp/test-workspace",
                 "test_results": {
                     "status": "passed",
                 },
@@ -550,26 +675,117 @@ def test_execute_workflow_run_does_not_persist_none_as_string():
                 "retry_count": 0,
             }
 
-            workflow_run, returned_state = (
+            returned_run, returned_state = (
                 execute_workflow_run(
                     db=db,
-                    project_id=project.id,
+                    workflow_run_id=workflow_run.id,
                     graph=FakeGraph(),
                     initial_state=initial_state,
                 )
             )
 
             assert returned_state == final_state
-            assert workflow_run.user_request == (
+            assert returned_run.id == workflow_run.id
+            assert returned_run.user_request == (
                 "Build a test application."
             )
-            assert workflow_run.status == "completed"
-            assert workflow_run.current_agent is None
-            assert workflow_run.current_task is None
-            assert workflow_run.iteration == 0
+            assert returned_run.status == "completed"
+            assert returned_run.current_agent is None
+            assert returned_run.current_task is None
+            assert returned_run.iteration == 0
 
-            assert workflow_run.current_agent != "None"
-            assert workflow_run.current_task != "None"
+            assert returned_run.current_agent != "None"
+            assert returned_run.current_task != "None"
+
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+def test_run_workflow_in_background_executes_existing_run(
+    monkeypatch,
+):
+    from app.services import workflow_execution_service
+
+    engine = create_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+    )
+
+    TestSessionLocal = sessionmaker(
+        bind=engine,
+        autoflush=False,
+        autocommit=False,
+    )
+
+    Base.metadata.create_all(bind=engine)
+
+    try:
+        with Session(engine) as db:
+            project = Project(
+                name="Background Workflow",
+            )
+
+            db.add(project)
+            db.commit()
+            db.refresh(project)
+
+            workflow_run = start_workflow_run(
+                db=db,
+                project_id=project.id,
+                user_request="Build a background test application.",
+            )
+
+            run_id = workflow_run.id
+
+        class FakeGraph:
+            def stream(self, state):
+                yield {
+                    "task_progression": {
+                        **state,
+                        "current_agent": "task_progression",
+                        "current_task": "",
+                        "status": "all_tasks_completed",
+                        "iteration": 0,
+                    }
+                }
+
+        monkeypatch.setattr(
+            workflow_execution_service,
+            "build_graph",
+            lambda: FakeGraph(),
+        )
+
+        monkeypatch.setattr(
+            workflow_execution_service,
+            "SessionLocal",
+            TestSessionLocal,
+        )
+
+        run_workflow_in_background(run_id)
+
+        with Session(engine) as db:
+            stored_run = db.get(
+                WorkflowRun,
+                run_id,
+            )
+
+            assert stored_run is not None
+            assert stored_run.id == run_id
+            assert stored_run.user_request == (
+                "Build a background test application."
+            )
+            assert stored_run.status == "completed"
+            assert stored_run.current_agent == (
+                "task_progression"
+            )
+            assert stored_run.current_task == ""
+            assert stored_run.iteration == 0
+            assert stored_run.completed_at is not None
+
+            runs = db.query(WorkflowRun).all()
+
+            assert len(runs) == 1
 
     finally:
         Base.metadata.drop_all(bind=engine)

@@ -1,8 +1,16 @@
 from pathlib import Path
 
 from app.graph.workflow import (
+    MAX_ARCHITECTURE_RETRIES,
+    MAX_ARCHITECTURE_RETRIES,
     MAX_ITERATIONS,
+    architecture_retry_router,
+    architecture_retry_router,
     architecture_validation_agent,
+    increment_architecture_retry,
+    mark_architecture_max_retries_reached,
+    increment_architecture_retry,
+    mark_architecture_max_retries_reached,
     artifact_validation_agent,
     increment_iteration,
     task_progression_router,
@@ -522,6 +530,7 @@ def test_end_to_end_multi_task_workflow(
         "status": "started",
         "iteration": 0,
         "retry_count": 0,
+        "architecture_retry_count": 0,
     }
 
     final_state = graph.invoke(initial_state)
@@ -777,6 +786,7 @@ def test_end_to_end_retry_then_continue_to_next_task(
         "status": "started",
         "iteration": 0,
         "retry_count": 0,
+        "architecture_retry_count": 0,
     }
 
     final_state = graph.invoke(
@@ -827,4 +837,69 @@ def test_end_to_end_retry_then_continue_to_next_task(
         in generated_file.read_text(
             encoding="utf-8"
         )
+    )
+
+def test_architecture_retry_router_passes_when_architecture_is_valid():
+    state = {
+        "validation_errors": [],
+        "architecture_retry_count": 0,
+    }
+
+    assert architecture_retry_router(state) == "passed"
+
+
+def test_architecture_retry_router_retries_when_errors_exist():
+    state = {
+        "validation_errors": [
+            "SQLite is not allowed. CodeForge uses PostgreSQL."
+        ],
+        "architecture_retry_count": 1,
+    }
+
+    assert architecture_retry_router(state) == "retry"
+
+
+def test_architecture_retry_router_stops_at_max_retries():
+    state = {
+        "validation_errors": [
+            "SQLite is not allowed. CodeForge uses PostgreSQL."
+        ],
+        "architecture_retry_count": MAX_ARCHITECTURE_RETRIES,
+    }
+
+    assert architecture_retry_router(state) == "max_retries"
+
+
+def test_increment_architecture_retry():
+    state = {
+        "validation_errors": [
+            "Invalid architecture"
+        ],
+        "architecture_retry_count": 0,
+        "current_agent": "architecture_validator",
+    }
+
+    result = increment_architecture_retry(state)
+
+    assert result["architecture_retry_count"] == 1
+    assert result["current_agent"] == (
+        "architecture_validator"
+    )
+
+
+def test_mark_architecture_max_retries_reached():
+    state = {
+        "validation_errors": [
+            "Invalid architecture"
+        ],
+        "architecture_retry_count": MAX_ARCHITECTURE_RETRIES,
+        "current_agent": "architecture_validator",
+        "status": "architecture_validation_failed",
+    }
+
+    result = mark_architecture_max_retries_reached(state)
+
+    assert result["current_agent"] == "workflow"
+    assert result["status"] == (
+        "max_architecture_retries_reached"
     )

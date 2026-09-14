@@ -16,3 +16,4 @@ class CodeForgeState(TypedDict):
     status: str
     iteration: int
     retry_count: int
+    architecture_retry_count: int

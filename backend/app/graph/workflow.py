@@ -15,6 +15,7 @@ from app.services.task_validator import validate_tasks
 
 
 MAX_ITERATIONS = 5
+MAX_ARCHITECTURE_RETRIES = 3
 
 
 def validation_router(state: CodeForgeState) -> str:
@@ -42,6 +43,39 @@ def architecture_validation_agent(
         state["status"] = (
             "architecture_validation_passed"
         )
+
+    return state
+
+
+def architecture_retry_router(
+    state: CodeForgeState,
+) -> str:
+    if not state["validation_errors"]:
+        return "passed"
+
+    if (
+        state["architecture_retry_count"]
+        >= MAX_ARCHITECTURE_RETRIES
+    ):
+        return "max_retries"
+
+    return "retry"
+
+
+def increment_architecture_retry(
+    state: CodeForgeState,
+) -> CodeForgeState:
+    state["architecture_retry_count"] += 1
+    state["current_agent"] = "architecture_validator"
+
+    return state
+
+
+def mark_architecture_max_retries_reached(
+    state: CodeForgeState,
+) -> CodeForgeState:
+    state["current_agent"] = "workflow"
+    state["status"] = "max_architecture_retries_reached"
 
     return state
 
@@ -150,6 +184,16 @@ def build_graph():
     )
 
     graph.add_node(
+        "architecture_retry",
+        increment_architecture_retry,
+    )
+
+    graph.add_node(
+        "max_architecture_retries_reached",
+        mark_architecture_max_retries_reached,
+    )
+
+    graph.add_node(
         "task_planner",
         task_planner_agent,
     )
@@ -216,11 +260,22 @@ def build_graph():
 
     graph.add_conditional_edges(
         "architecture_validator",
-        validation_router,
+        architecture_retry_router,
         {
             "passed": "task_planner",
-            "failed": END,
+            "retry": "architecture_retry",
+            "max_retries": "max_architecture_retries_reached",
         },
+    )
+
+    graph.add_edge(
+        "architecture_retry",
+        "architect",
+    )
+
+    graph.add_edge(
+        "max_architecture_retries_reached",
+        END,
     )
 
     graph.add_edge(
