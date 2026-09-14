@@ -51,41 +51,40 @@ def execute_workflow_run(
             if not event:
                 continue
 
-            node_name, node_state = next(
-                iter(event.items())
-            )
+            _, node_state = next(iter(event.items()))
 
             if not isinstance(node_state, dict):
                 continue
 
             final_state = node_state
 
+            status = node_state.get("status")
+            current_agent = node_state.get("current_agent")
+            current_task = node_state.get("current_task")
+            iteration = node_state.get("iteration")
+
             update_workflow_run(
                 db=db,
                 workflow_run_id=workflow_run.id,
-                status=str(
-                    node_state.get(
-                        "status",
-                        workflow_run.status,
-                    )
+                status=(
+                    status
+                    if status is not None
+                    else workflow_run.status
                 ),
-                current_agent=str(
-                    node_state.get(
-                        "current_agent",
-                        workflow_run.current_agent,
-                    )
+                current_agent=(
+                    current_agent
+                    if current_agent is not None
+                    else workflow_run.current_agent
                 ),
-                current_task=str(
-                    node_state.get(
-                        "current_task",
-                        workflow_run.current_task,
-                    )
+                current_task=(
+                    current_task
+                    if current_task is not None
+                    else workflow_run.current_task
                 ),
-                iteration=int(
-                    node_state.get(
-                        "iteration",
-                        workflow_run.iteration,
-                    )
+                iteration=(
+                    iteration
+                    if isinstance(iteration, int)
+                    else workflow_run.iteration
                 ),
             )
 

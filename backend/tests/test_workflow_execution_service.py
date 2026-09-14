@@ -480,3 +480,76 @@ def test_execute_workflow_run_updates_database_after_each_node():
     finally:
         Base.metadata.drop_all(bind=engine)
         engine.dispose()
+
+
+def test_execute_workflow_run_does_not_persist_none_as_string():
+    engine = create_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+    )
+
+    Base.metadata.create_all(bind=engine)
+
+    try:
+        with Session(engine) as db:
+            project = Project(
+                name="None Value Workflow",
+            )
+
+            db.add(project)
+            db.commit()
+            db.refresh(project)
+
+            final_state = {
+                "current_agent": None,
+                "current_task": None,
+                "status": "all_tasks_completed",
+                "iteration": 0,
+            }
+
+            class FakeGraph:
+                def stream(self, state):
+                    yield {
+                        "task_progression": final_state,
+                    }
+
+            initial_state = {
+                "user_request": "Build a test application.",
+                "requirements": "",
+                "architecture": "",
+                "tasks": [],
+                "current_task_index": 1,
+                "current_task": "",
+                "files": {},
+                "validation_errors": [],
+                "workspace": "/tmp/test-workspace",
+                "test_results": {
+                    "status": "passed",
+                },
+                "current_agent": "task_progression",
+                "status": "started",
+                "iteration": 0,
+                "retry_count": 0,
+            }
+
+            workflow_run, returned_state = (
+                execute_workflow_run(
+                    db=db,
+                    project_id=project.id,
+                    graph=FakeGraph(),
+                    initial_state=initial_state,
+                )
+            )
+
+            assert returned_state == final_state
+            assert workflow_run.status == "completed"
+            assert workflow_run.current_agent is None
+            assert workflow_run.current_task is None
+            assert workflow_run.iteration == 0
+
+            assert workflow_run.current_agent != "None"
+            assert workflow_run.current_task != "None"
+
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
