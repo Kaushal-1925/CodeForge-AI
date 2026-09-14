@@ -17,6 +17,7 @@ from app.services.workflow_status import get_workflow_run_status
 def start_workflow_run(
     db: Session,
     project_id: UUID,
+    user_request: str,
 ) -> WorkflowRun:
     project = db.get(Project, project_id)
 
@@ -28,6 +29,7 @@ def start_workflow_run(
     workflow_run = create_workflow_run(
         db=db,
         project_id=project_id,
+        user_request=user_request,
     )
 
     return workflow_run
@@ -42,6 +44,7 @@ def execute_workflow_run(
     workflow_run = start_workflow_run(
         db=db,
         project_id=project_id,
+        user_request=initial_state["user_request"],
     )
 
     final_state = initial_state

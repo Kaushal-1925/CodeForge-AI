@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -17,6 +17,11 @@ class WorkflowRun(Base):
 
     project_id: Mapped[UUID] = mapped_column(
         ForeignKey("projects.id"),
+        nullable=False,
+    )
+
+    user_request: Mapped[str] = mapped_column(
+        Text,
         nullable=False,
     )
 

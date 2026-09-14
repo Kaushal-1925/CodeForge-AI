@@ -37,13 +37,17 @@ def test_start_workflow_run():
             db.commit()
             db.refresh(project)
 
+            user_request = "Build a test application."
+
             workflow_run = start_workflow_run(
                 db=db,
                 project_id=project.id,
+                user_request=user_request,
             )
 
             assert workflow_run.id is not None
             assert workflow_run.project_id == project.id
+            assert workflow_run.user_request == user_request
             assert workflow_run.status == "started"
             assert workflow_run.iteration == 0
 
@@ -54,6 +58,7 @@ def test_start_workflow_run():
 
             assert stored_run is not None
             assert stored_run.project_id == project.id
+            assert stored_run.user_request == user_request
 
     finally:
         Base.metadata.drop_all(bind=engine)
@@ -76,6 +81,7 @@ def test_start_workflow_run_rejects_unknown_project():
                 start_workflow_run(
                     db=db,
                     project_id=unknown_project_id,
+                    user_request="Build a test application.",
                 )
             except ValueError as exc:
                 assert str(unknown_project_id) in str(exc)
@@ -143,6 +149,9 @@ def test_execute_workflow_run_completes_successfully():
 
             assert returned_state == final_state
             assert workflow_run.project_id == project.id
+            assert workflow_run.user_request == (
+                "Build a test application."
+            )
             assert workflow_run.status == "completed"
             assert workflow_run.current_agent == (
                 "task_progression"
@@ -210,6 +219,9 @@ def test_execute_workflow_run_persists_failure():
 
             assert returned_state == final_state
             assert workflow_run.project_id == project.id
+            assert workflow_run.user_request == (
+                "Build a test application."
+            )
             assert workflow_run.status == "failed"
             assert workflow_run.current_agent == (
                 "task_validator"
@@ -285,6 +297,9 @@ def test_execute_workflow_run_marks_exception_as_failed():
             stored_run = runs[0]
 
             assert stored_run.project_id == project.id
+            assert stored_run.user_request == (
+                "Build a test application."
+            )
             assert stored_run.status == "failed"
             assert stored_run.completed_at is None
 
@@ -361,6 +376,9 @@ def test_execute_workflow_run_persists_each_streamed_node():
             )
 
             assert returned_state == final_state
+            assert workflow_run.user_request == (
+                "Build a test application."
+            )
             assert workflow_run.status == "completed"
             assert workflow_run.current_agent == "developer"
             assert workflow_run.current_task == (
@@ -542,6 +560,9 @@ def test_execute_workflow_run_does_not_persist_none_as_string():
             )
 
             assert returned_state == final_state
+            assert workflow_run.user_request == (
+                "Build a test application."
+            )
             assert workflow_run.status == "completed"
             assert workflow_run.current_agent is None
             assert workflow_run.current_task is None

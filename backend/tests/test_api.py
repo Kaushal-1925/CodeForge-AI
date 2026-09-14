@@ -37,7 +37,9 @@ def test_get_project(client) -> None:
 
     project_id = create_response.json()["id"]
 
-    response = client.get(f"/projects/{project_id}")
+    response = client.get(
+        f"/projects/{project_id}"
+    )
 
     assert response.status_code == 200
 
@@ -62,8 +64,13 @@ def test_create_workflow_run(client) -> None:
 
     project_id = project_response.json()["id"]
 
+    user_request = "Build a simple workflow test application"
+
     response = client.post(
         f"/projects/{project_id}/runs",
+        json={
+            "user_request": user_request,
+        },
     )
 
     assert response.status_code == 200
@@ -72,6 +79,7 @@ def test_create_workflow_run(client) -> None:
 
     assert "id" in data
     assert data["project_id"] == project_id
+    assert data["user_request"] == user_request
     assert data["status"] == "started"
     assert data["current_agent"] is None
     assert data["current_task"] is None
@@ -89,9 +97,13 @@ def test_create_workflow_run_rejects_unknown_project(
 
     response = client.post(
         f"/projects/{project_id}/runs",
+        json={
+            "user_request": "Build a test application",
+        },
     )
 
     assert response.status_code == 404
+
     assert response.json() == {
         "detail": "Project not found"
     }

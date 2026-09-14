@@ -9,9 +9,11 @@ from app.models.workflow_run import WorkflowRun
 def create_workflow_run(
     db: Session,
     project_id: UUID,
+    user_request: str,
 ) -> WorkflowRun:
     workflow_run = WorkflowRun(
         project_id=project_id,
+        user_request=user_request,
         status="started",
         current_agent=None,
         current_task=None,
@@ -38,7 +40,10 @@ def update_workflow_run(
     current_task: str | None = None,
     iteration: int | None = None,
 ) -> WorkflowRun:
-    workflow_run = db.get(WorkflowRun, workflow_run_id)
+    workflow_run = db.get(
+        WorkflowRun,
+        workflow_run_id,
+    )
 
     if workflow_run is None:
         raise ValueError(
@@ -71,7 +76,10 @@ def complete_workflow_run(
     db: Session,
     workflow_run_id: UUID,
 ) -> WorkflowRun:
-    workflow_run = db.get(WorkflowRun, workflow_run_id)
+    workflow_run = db.get(
+        WorkflowRun,
+        workflow_run_id,
+    )
 
     if workflow_run is None:
         raise ValueError(

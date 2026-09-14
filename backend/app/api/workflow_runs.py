@@ -5,7 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.database.dependencies import get_db
 from app.models.workflow_run import WorkflowRun
-from app.schemas.workflow_run import WorkflowRunResponse
+from app.schemas.workflow_run import (
+    WorkflowRunCreate,
+    WorkflowRunResponse,
+)
 from app.services.workflow_execution_service import start_workflow_run
 
 
@@ -21,12 +24,14 @@ router = APIRouter(
 )
 def create_workflow_run(
     project_id: UUID,
+    run_data: WorkflowRunCreate,
     db: Session = Depends(get_db),
 ) -> WorkflowRun:
     try:
         workflow_run = start_workflow_run(
             db=db,
             project_id=project_id,
+            user_request=run_data.user_request,
         )
     except ValueError:
         raise HTTPException(

@@ -12,6 +12,13 @@ from app.services.workflow_run_service import (
     update_workflow_run,
 )
 
+
+TEST_DATABASE_URL = (
+    "postgresql+psycopg://codeforge:codeforge_password"
+    "@localhost:5432/codeforge_test"
+)
+
+
 def test_complete_workflow_run():
     engine = create_engine(
         TEST_DATABASE_URL,
@@ -32,6 +39,7 @@ def test_complete_workflow_run():
             workflow_run = create_workflow_run(
                 db=db,
                 project_id=project.id,
+                user_request="Build a test application.",
             )
 
             completed_run = complete_workflow_run(
@@ -40,6 +48,9 @@ def test_complete_workflow_run():
             )
 
             assert completed_run.id == workflow_run.id
+            assert completed_run.user_request == (
+                "Build a test application."
+            )
             assert completed_run.status == "completed"
             assert completed_run.completed_at is not None
 
@@ -68,6 +79,7 @@ def test_complete_workflow_run_preserves_workflow_data():
             workflow_run = create_workflow_run(
                 db=db,
                 project_id=project.id,
+                user_request="Build a test application.",
             )
 
             update_workflow_run(
@@ -84,8 +96,13 @@ def test_complete_workflow_run_preserves_workflow_data():
             )
 
             assert completed_run.status == "completed"
+            assert completed_run.user_request == (
+                "Build a test application."
+            )
             assert completed_run.current_agent == "tester"
-            assert completed_run.current_task == "Run generated tests"
+            assert completed_run.current_task == (
+                "Run generated tests"
+            )
             assert completed_run.iteration == 2
             assert completed_run.completed_at is not None
 
@@ -122,11 +139,6 @@ def test_complete_workflow_run_rejects_unknown_run():
         Base.metadata.drop_all(bind=engine)
         engine.dispose()
 
-TEST_DATABASE_URL = (
-    "postgresql+psycopg://codeforge:codeforge_password"
-    "@localhost:5432/codeforge_test"
-)
-
 
 def test_create_workflow_run():
     engine = create_engine(
@@ -146,13 +158,17 @@ def test_create_workflow_run():
             db.commit()
             db.refresh(project)
 
+            user_request = "Build a test application."
+
             workflow_run = create_workflow_run(
                 db=db,
                 project_id=project.id,
+                user_request=user_request,
             )
 
             assert workflow_run.id is not None
             assert workflow_run.project_id == project.id
+            assert workflow_run.user_request == user_request
             assert workflow_run.status == "started"
             assert workflow_run.current_agent is None
             assert workflow_run.current_task is None
@@ -175,6 +191,7 @@ def test_create_workflow_run_persists_record():
 
     try:
         project_id = uuid4()
+        user_request = "Build a persistent test application."
 
         with Session(engine) as db:
             project = Project(
@@ -187,6 +204,7 @@ def test_create_workflow_run_persists_record():
             workflow_run = create_workflow_run(
                 db=db,
                 project_id=project_id,
+                user_request=user_request,
             )
 
             stored_run = db.get(
@@ -197,6 +215,7 @@ def test_create_workflow_run_persists_record():
             assert stored_run is not None
             assert stored_run.id == workflow_run.id
             assert stored_run.project_id == project_id
+            assert stored_run.user_request == user_request
             assert stored_run.status == "started"
 
     finally:
@@ -222,6 +241,7 @@ def test_create_workflow_run_rolls_back_on_failure():
                 create_workflow_run(
                     db=db,
                     project_id=unknown_project_id,
+                    user_request="Build a test application.",
                 )
             except IntegrityError:
                 pass
@@ -267,6 +287,7 @@ def test_update_workflow_run():
             workflow_run = create_workflow_run(
                 db=db,
                 project_id=project.id,
+                user_request="Build a test application.",
             )
 
             updated_run = update_workflow_run(
@@ -279,9 +300,14 @@ def test_update_workflow_run():
             )
 
             assert updated_run.id == workflow_run.id
+            assert updated_run.user_request == (
+                "Build a test application."
+            )
             assert updated_run.status == "developer_completed"
             assert updated_run.current_agent == "developer"
-            assert updated_run.current_task == "Implement Task model"
+            assert updated_run.current_task == (
+                "Implement Task model"
+            )
             assert updated_run.iteration == 1
 
     finally:
@@ -309,6 +335,7 @@ def test_update_workflow_run_preserves_unspecified_fields():
             workflow_run = create_workflow_run(
                 db=db,
                 project_id=project.id,
+                user_request="Build a test application.",
             )
 
             update_workflow_run(
@@ -323,6 +350,9 @@ def test_update_workflow_run_preserves_unspecified_fields():
             )
 
             assert stored_run is not None
+            assert stored_run.user_request == (
+                "Build a test application."
+            )
             assert stored_run.status == "tests_failed"
             assert stored_run.current_agent is None
             assert stored_run.current_task is None
