@@ -1,17 +1,14 @@
 import json
 
-from langchain_groq import ChatGroq
 from pydantic import ValidationError
 
 from app.config import settings
 from app.graph.state import CodeForgeState
 from app.schemas.task import TaskPlan
+from app.services.llm import create_llm
 
 
-model = ChatGroq(
-    model="openai/gpt-oss-20b",
-    api_key=settings.groq_api_key,
-)
+model = create_llm()
 
 
 PLANNER_PROMPT = """
@@ -96,7 +93,6 @@ ORM: SQLAlchemy 2.x
 Database driver: psycopg
 Configuration: pydantic-settings
 Testing: pytest
-Frontend: Next.js + TypeScript
 
 ==================================================
 TASK RULES

@@ -1,17 +1,12 @@
 from pathlib import Path
 
-from langchain_groq import ChatGroq
-
-from app.config import settings
 from app.graph.state import CodeForgeState
 from app.services.file_parser import parse_generated_files
+from app.services.llm import create_llm
 from app.services.workspace_reader import read_workspace_files
 
 
-model = ChatGroq(
-    model="openai/gpt-oss-20b",
-    api_key=settings.groq_api_key,
-)
+model = create_llm()
 
 
 def developer_agent(state: CodeForgeState) -> CodeForgeState:
@@ -222,8 +217,6 @@ Return ONLY FILE sections.
 Do not explain anything.
 
 Do not summarize anything.
-
-Do not include markdown outside FILE sections.
 
 Do not claim that tests pass.
 """
