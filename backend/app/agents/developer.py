@@ -223,7 +223,7 @@ Do not claim that tests pass.
     )
 
     state["files"] = parse_generated_files(
-        str(response.content)
+        str(response.text)
     )
 
     state["current_agent"] = "developer"

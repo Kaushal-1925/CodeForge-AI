@@ -21,7 +21,7 @@ Return only the functional requirements.
 """
     )
 
-    state["requirements"] = str(response.content)
+    state["requirements"] = str(response.text)
     state["current_agent"] = "project_manager"
     state["status"] = "manager_completed"
 
