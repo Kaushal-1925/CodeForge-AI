@@ -74,6 +74,13 @@ npm install
 npm run dev
 ```
 
+## Run on another PC
+
+For a clean, step-by-step setup on a separate machine (x64 Intel laptop recommended), see
+[`docs/RUN_ON_ANOTHER_PC.md`](docs/RUN_ON_ANOTHER_PC.md). It covers prerequisites, cloning,
+environment configuration, backend and frontend startup, end-to-end verification, optional
+Docker/PostgreSQL acceptance, and the one-command check script.
+
 ## Generated-project test execution
 
 Workflow runs use the Docker image `codeforge-test-runner:py311`. Build it once:
