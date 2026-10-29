@@ -1,27 +1,33 @@
 from pathlib import Path
+from typing import Any
 
 from app.graph.state import CodeForgeState
 from app.services.file_parser import parse_generated_files
 from app.services.llm import create_llm
 from app.services.workspace_reader import read_workspace_files
 
+model: Any | None = None
 
-model = create_llm()
+
+def _get_model() -> Any:
+    global model
+
+    if model is None:
+        model = create_llm()
+
+    return model
 
 
 def developer_agent(state: CodeForgeState) -> CodeForgeState:
     test_results = state["test_results"]
 
-    workspace_files = read_workspace_files(
-        Path(state["workspace"])
-    )
+    workspace_files = read_workspace_files(Path(state["workspace"]))
 
     existing_project = "\n\n".join(
-        f"FILE: {path}\n{content}"
-        for path, content in workspace_files.items()
+        f"FILE: {path}\n{content}" for path, content in workspace_files.items()
     )
 
-    response = model.invoke(
+    response = _get_model().invoke(
         f"""
 You are the Developer Agent of CodeForge AI.
 
@@ -222,9 +228,7 @@ Do not claim that tests pass.
 """
     )
 
-    state["files"] = parse_generated_files(
-        str(response.text)
-    )
+    state["files"] = parse_generated_files(str(response.text))
 
     state["current_agent"] = "developer"
     state["status"] = "developer_completed"
@@ -232,4 +236,4 @@ Do not claim that tests pass.
     return state
 
 
-developer_agent.__test__ = False
+developer_agent.__test__ = False  # type: ignore[attr-defined]

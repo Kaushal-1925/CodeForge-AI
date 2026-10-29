@@ -1,7 +1,6 @@
 import subprocess
 from pathlib import Path
 
-
 DOCKER_IMAGE = "codeforge-test-runner:py311"
 
 
@@ -20,36 +19,36 @@ def run_tests_in_docker(
         }
 
     command = [
-    "docker",
-    "run",
-    "--rm",
-    "--network",
-    "none",
-    "--cap-drop",
-    "ALL",
-    "--security-opt",
-    "no-new-privileges",
-    "--user",
-    "65532:65532",
-    "--cpus",
-    "1",
-    "--memory",
-    "512m",
-    "--pids-limit",
-    "100",
-    "--read-only",
-    "--tmpfs",
-    "/tmp:rw,noexec,nosuid,nodev,mode=1777",
-    "-v",
-    f"{workspace}:/workspace:ro",
-    "-w",
-    "/workspace",
-    DOCKER_IMAGE,
-    "pytest",
-    "-q",
-    "-p",
-    "no:cacheprovider",
-]
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--user",
+        "65532:65532",
+        "--cpus",
+        "1",
+        "--memory",
+        "512m",
+        "--pids-limit",
+        "100",
+        "--read-only",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,nodev,mode=1777",
+        "-v",
+        f"{workspace}:/workspace:ro",
+        "-w",
+        "/workspace",
+        DOCKER_IMAGE,
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+    ]
 
     try:
         result = subprocess.run(

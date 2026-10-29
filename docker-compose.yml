@@ -4,13 +4,51 @@ services:
     container_name: codeforge-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: codeforge
-      POSTGRES_PASSWORD: codeforge_password
-      POSTGRES_DB: codeforge
+      POSTGRES_USER: ${POSTGRES_USER:-codeforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codeforge_password}
+      POSTGRES_DB: ${POSTGRES_DB:-codeforge}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-codeforge} -d ${POSTGRES_DB:-codeforge}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: codeforge-backend
+    restart: unless-stopped
+    environment:
+      CODEFORGE_ENVIRONMENT: development
+      CODEFORGE_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-codeforge}:${POSTGRES_PASSWORD:-codeforge_password}@postgres:5432/${POSTGRES_DB:-codeforge}
+      CODEFORGE_CORS_ORIGINS: http://localhost:3000
+      CODEFORGE_LLM_PROVIDER: ${CODEFORGE_LLM_PROVIDER:-deepseek}
+      CODEFORGE_LLM_MODEL: ${CODEFORGE_LLM_MODEL:-deepseek-chat}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+    container_name: codeforge-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

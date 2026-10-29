@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -16,7 +16,6 @@ from app.services.workflow_run_service import (
 )
 from app.services.workflow_status import get_workflow_run_status
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW_RUNS_DIRECTORY = PROJECT_ROOT / "sandbox" / "runs"
 
@@ -29,9 +28,10 @@ def start_workflow_run(
     project = db.get(Project, project_id)
 
     if project is None:
-        raise ValueError(
-            f"Project not found: {project_id}"
-        )
+        raise ValueError(f"Project not found: {project_id}")
+
+    project.status = "running"
+    db.commit()
 
     workflow_run = create_workflow_run(
         db=db,
@@ -42,12 +42,24 @@ def start_workflow_run(
     return workflow_run
 
 
+def _set_project_status(
+    db: Session,
+    project_id: UUID,
+    status: str,
+) -> None:
+    project = db.get(Project, project_id)
+
+    if project is None:
+        return
+
+    project.status = status
+    db.commit()
+
+
 def build_initial_state(
     workflow_run: WorkflowRun,
 ) -> CodeForgeState:
-    workspace = (
-        WORKFLOW_RUNS_DIRECTORY / str(workflow_run.id)
-    )
+    workspace = WORKFLOW_RUNS_DIRECTORY / str(workflow_run.id)
 
     workspace.mkdir(
         parents=True,
@@ -85,9 +97,7 @@ def execute_workflow_run(
     )
 
     if workflow_run is None:
-        raise ValueError(
-            f"Workflow run not found: {workflow_run_id}"
-        )
+        raise ValueError(f"Workflow run not found: {workflow_run_id}")
 
     final_state = initial_state
 
@@ -101,7 +111,7 @@ def execute_workflow_run(
             if not isinstance(node_state, dict):
                 continue
 
-            final_state = node_state
+            final_state = cast(CodeForgeState, node_state)
 
             status = node_state.get("status")
             current_agent = node_state.get("current_agent")
@@ -111,42 +121,38 @@ def execute_workflow_run(
             workflow_run = update_workflow_run(
                 db=db,
                 workflow_run_id=workflow_run.id,
-                status=(
-                    status
-                    if status is not None
-                    else workflow_run.status
-                ),
+                status=(status if status is not None else workflow_run.status),
                 current_agent=(
-                    current_agent
-                    if current_agent is not None
-                    else workflow_run.current_agent
+                    current_agent if current_agent is not None else workflow_run.current_agent
                 ),
                 current_task=(
-                    current_task
-                    if current_task is not None
-                    else workflow_run.current_task
+                    current_task if current_task is not None else workflow_run.current_task
                 ),
-                iteration=(
-                    iteration
-                    if isinstance(iteration, int)
-                    else workflow_run.iteration
-                ),
+                iteration=(iteration if isinstance(iteration, int) else workflow_run.iteration),
             )
 
-        workflow_status = get_workflow_run_status(
-            final_state
-        )
+        workflow_status = get_workflow_run_status(final_state)
 
         if workflow_status == "completed":
             workflow_run = complete_workflow_run(
                 db=db,
                 workflow_run_id=workflow_run.id,
             )
+            _set_project_status(
+                db,
+                workflow_run.project_id,
+                "completed",
+            )
         else:
             workflow_run = update_workflow_run(
                 db=db,
                 workflow_run_id=workflow_run.id,
                 status="failed",
+            )
+            _set_project_status(
+                db,
+                workflow_run.project_id,
+                "failed",
             )
 
         return workflow_run, final_state
@@ -156,6 +162,11 @@ def execute_workflow_run(
             db=db,
             workflow_run_id=workflow_run.id,
             status="failed",
+        )
+        _set_project_status(
+            db,
+            workflow_run.project_id,
+            "failed",
         )
         raise
 
@@ -174,9 +185,7 @@ def run_workflow_in_background(
         if workflow_run is None:
             return
 
-        initial_state = build_initial_state(
-            workflow_run
-        )
+        initial_state = build_initial_state(workflow_run)
 
         graph = build_graph()
 
@@ -194,10 +203,15 @@ def run_workflow_in_background(
         )
 
         if workflow_run is not None:
-            update_workflow_run(
+            updated_run = update_workflow_run(
                 db=db,
                 workflow_run_id=workflow_run_id,
                 status="failed",
+            )
+            _set_project_status(
+                db,
+                updated_run.project_id,
+                "failed",
             )
 
     finally:

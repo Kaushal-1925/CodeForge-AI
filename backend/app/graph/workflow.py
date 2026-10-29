@@ -1,3 +1,5 @@
+from typing import Any
+
 from langgraph.graph import END, START, StateGraph
 
 from app.agents.architect import architect_agent
@@ -13,7 +15,6 @@ from app.services.artifact_validator import validate_written_artifacts
 from app.services.task_progression import advance_to_next_task
 from app.services.task_validator import validate_tasks
 
-
 MAX_ITERATIONS = 5
 MAX_ARCHITECTURE_RETRIES = 3
 
@@ -28,21 +29,15 @@ def validation_router(state: CodeForgeState) -> str:
 def architecture_validation_agent(
     state: CodeForgeState,
 ) -> CodeForgeState:
-    errors = validate_architecture(
-        state["architecture"]
-    )
+    errors = validate_architecture(state["architecture"])
 
     state["validation_errors"] = errors
     state["current_agent"] = "architecture_validator"
 
     if errors:
-        state["status"] = (
-            "architecture_validation_failed"
-        )
+        state["status"] = "architecture_validation_failed"
     else:
-        state["status"] = (
-            "architecture_validation_passed"
-        )
+        state["status"] = "architecture_validation_passed"
 
     return state
 
@@ -53,10 +48,7 @@ def architecture_retry_router(
     if not state["validation_errors"]:
         return "passed"
 
-    if (
-        state["architecture_retry_count"]
-        >= MAX_ARCHITECTURE_RETRIES
-    ):
+    if state["architecture_retry_count"] >= MAX_ARCHITECTURE_RETRIES:
         return "max_retries"
 
     return "retry"
@@ -83,9 +75,7 @@ def mark_architecture_max_retries_reached(
 def task_validation_agent(
     state: CodeForgeState,
 ) -> CodeForgeState:
-    errors = validate_tasks(
-        state["tasks"]
-    )
+    errors = validate_tasks(state["tasks"])
 
     state["validation_errors"] = errors
     state["current_agent"] = "task_validator"
@@ -112,13 +102,9 @@ def artifact_validation_agent(
     state["current_agent"] = "artifact_validator"
 
     if errors:
-        state["status"] = (
-            "artifact_validation_failed"
-        )
+        state["status"] = "artifact_validation_failed"
     else:
-        state["status"] = (
-            "artifact_validation_passed"
-        )
+        state["status"] = "artifact_validation_passed"
 
     return state
 
@@ -144,7 +130,7 @@ def test_router(state: CodeForgeState) -> str:
     return "failed"
 
 
-test_router.__test__ = False
+test_router.__test__ = False  # type: ignore[attr-defined]
 
 
 def increment_iteration(
@@ -165,7 +151,7 @@ def mark_max_retries_reached(
     return state
 
 
-def build_graph():
+def build_graph() -> Any:
     graph = StateGraph(CodeForgeState)
 
     graph.add_node(
