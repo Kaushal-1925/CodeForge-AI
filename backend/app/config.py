@@ -1,16 +1,12 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+"""Backward-compatible settings access for the rebuilt application.
 
+New code should import from :mod:`app.core.config`. This module keeps the
+ported workflow modules and Alembic environment working with one settings
+instance.
+"""
 
-class Settings(BaseSettings):
-    database_url: str
-    groq_api_key: str
-    gemini_api_key: str
+from app.core.config import Settings, get_settings
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+settings = get_settings()
 
-
-settings = Settings()
+__all__ = ["Settings", "get_settings", "settings"]

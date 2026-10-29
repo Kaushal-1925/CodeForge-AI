@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -6,8 +7,16 @@ from app.graph.state import CodeForgeState
 from app.schemas.task import TaskPlan
 from app.services.llm import create_llm
 
+model: Any | None = None
 
-model = create_llm()
+
+def _get_model() -> Any:
+    global model
+
+    if model is None:
+        model = create_llm()
+
+    return model
 
 
 PLANNER_PROMPT = """
@@ -102,10 +111,7 @@ infrastructure or introduces forbidden technologies.
 
 
 def _build_tasks(task_plan: TaskPlan) -> list[str]:
-    return [
-        f"{task.title}\n\n{task.description}"
-        for task in task_plan.tasks
-    ]
+    return [f"{task.title}\n\n{task.description}" for task in task_plan.tasks]
 
 
 def _apply_task_plan(
@@ -132,7 +138,7 @@ def _response_to_task_plan(response: object) -> TaskPlan:
     Convert either a structured response or a normal text response
     into the validated TaskPlan schema.
 
-    Real ChatGroq responses are expected to contain JSON text.
+    Real LLM responses are expected to contain JSON text.
 
     Existing unit-test mocks return an object with a `tasks`
     attribute, so those responses are converted directly.
@@ -157,10 +163,7 @@ def _response_to_task_plan(response: object) -> TaskPlan:
     content = getattr(response, "content", None)
 
     if content is None:
-        raise TypeError(
-            "Task planner model response contains neither "
-            "'tasks' nor 'content'."
-        )
+        raise TypeError("Task planner model response contains neither 'tasks' nor 'content'.")
 
     content = str(content).strip()
 
@@ -179,7 +182,7 @@ def task_planner_agent(
     )
 
     try:
-        response = model.invoke(prompt)
+        response = _get_model().invoke(prompt)
 
         task_plan = _response_to_task_plan(response)
 
@@ -207,4 +210,4 @@ def task_planner_agent(
         return state
 
 
-task_planner_agent.__test__ = False
+task_planner_agent.__test__ = False  # type: ignore[attr-defined]

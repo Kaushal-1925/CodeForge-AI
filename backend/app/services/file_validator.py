@@ -1,6 +1,5 @@
 from pathlib import PurePosixPath
 
-
 ALLOWED_PREFIXES = (
     "backend/app/",
     "backend/tests/",
@@ -41,6 +40,8 @@ def validate_generated_files(files: dict[str, str]) -> list[str]:
 
         # Basic secret detection.
         dangerous_patterns = (
+            "DEEPSEEK_API_KEY=",
+            "GEMINI_API_KEY=",
             "GROQ_API_KEY=",
             "DATABASE_PASSWORD=",
             "POSTGRES_PASSWORD=",
@@ -48,8 +49,6 @@ def validate_generated_files(files: dict[str, str]) -> list[str]:
 
         for pattern in dangerous_patterns:
             if pattern in content:
-                errors.append(
-                    f"Possible hardcoded secret found in: {path}"
-                )
+                errors.append(f"Possible hardcoded secret found in: {path}")
 
     return errors

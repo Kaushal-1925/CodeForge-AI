@@ -1,7 +1,6 @@
 import re
 from typing import Final
 
-
 ERROR_PATTERNS: Final[list[tuple[str, str]]] = [
     (
         "ModuleNotFoundError",

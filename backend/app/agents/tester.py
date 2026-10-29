@@ -26,4 +26,5 @@ def tester_agent(state: CodeForgeState) -> CodeForgeState:
 
     return state
 
-tester_agent.__test__ = False
+
+tester_agent.__test__ = False  # type: ignore[attr-defined]

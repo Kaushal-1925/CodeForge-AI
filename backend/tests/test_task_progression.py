@@ -12,10 +12,7 @@ def make_state():
             "Create Task tests\n\nImplement the Task tests.",
         ],
         "current_task_index": 0,
-        "current_task": (
-            "Create Task model\n\n"
-            "Implement the Task model."
-        ),
+        "current_task": ("Create Task model\n\nImplement the Task model."),
         "files": {},
         "validation_errors": [],
         "workspace": "sandbox/test-run",
@@ -33,10 +30,7 @@ def test_advance_to_next_task():
 
     assert result["current_task_index"] == 1
 
-    assert result["current_task"] == (
-        "Create Task API\n\n"
-        "Implement the Task API."
-    )
+    assert result["current_task"] == ("Create Task API\n\nImplement the Task API.")
 
     assert result["status"] == "next_task_ready"
 
@@ -52,10 +46,7 @@ def test_advance_to_final_task():
 
     assert result["current_task_index"] == 2
 
-    assert result["current_task"] == (
-        "Create Task tests\n\n"
-        "Implement the Task tests."
-    )
+    assert result["current_task"] == ("Create Task tests\n\nImplement the Task tests.")
 
     assert result["status"] == "next_task_ready"
 
@@ -71,6 +62,8 @@ def test_all_tasks_completed():
     assert result["current_task"] == ""
     assert result["status"] == "all_tasks_completed"
     assert result["current_agent"] == "task_progression"
+
+
 def test_new_task_resets_retry_state():
     state = make_state()
 
@@ -79,9 +72,7 @@ def test_new_task_resets_retry_state():
         "status": "passed",
         "output": "Previous task passed",
     }
-    state["validation_errors"] = [
-        "Previous task validation error"
-    ]
+    state["validation_errors"] = ["Previous task validation error"]
 
     result = advance_to_next_task(state)
 

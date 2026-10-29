@@ -9,12 +9,7 @@ def test_written_artifacts_pass(tmp_path: Path):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
-    file_path = (
-        workspace
-        / "backend"
-        / "app"
-        / "example.py"
-    )
+    file_path = workspace / "backend" / "app" / "example.py"
 
     file_path.parent.mkdir(
         parents=True,
@@ -28,9 +23,7 @@ def test_written_artifacts_pass(tmp_path: Path):
         encoding="utf-8",
     )
 
-    files = {
-        "backend/app/example.py": content
-    }
+    files = {"backend/app/example.py": content}
 
     errors = validate_written_artifacts(
         files,
@@ -44,31 +37,21 @@ def test_missing_artifact_fails(tmp_path: Path):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
-    files = {
-        "backend/app/missing.py": "print('hello')"
-    }
+    files = {"backend/app/missing.py": "print('hello')"}
 
     errors = validate_written_artifacts(
         files,
         workspace,
     )
 
-    assert errors == [
-        "Generated artifact was not written: "
-        "backend/app/missing.py"
-    ]
+    assert errors == ["Generated artifact was not written: backend/app/missing.py"]
 
 
 def test_modified_artifact_fails(tmp_path: Path):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
-    file_path = (
-        workspace
-        / "backend"
-        / "app"
-        / "example.py"
-    )
+    file_path = workspace / "backend" / "app" / "example.py"
 
     file_path.parent.mkdir(
         parents=True,
@@ -80,16 +63,11 @@ def test_modified_artifact_fails(tmp_path: Path):
         encoding="utf-8",
     )
 
-    files = {
-        "backend/app/example.py": "expected content"
-    }
+    files = {"backend/app/example.py": "expected content"}
 
     errors = validate_written_artifacts(
         files,
         workspace,
     )
 
-    assert errors == [
-        "Generated artifact content does not match: "
-        "backend/app/example.py"
-    ]
+    assert errors == ["Generated artifact content does not match: backend/app/example.py"]
