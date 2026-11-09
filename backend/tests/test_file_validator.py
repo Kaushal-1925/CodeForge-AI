@@ -68,3 +68,13 @@ def test_reject_hardcoded_secret() -> None:
     errors = validate_generated_files(files)
 
     assert any("hardcoded secret" in error for error in errors)
+
+
+def test_reject_deepseek_api_key() -> None:
+    files = {
+        "backend/app/config.py": "DEEPSEEK_API_KEY=super_secret_key",
+    }
+
+    errors = validate_generated_files(files)
+
+    assert any("hardcoded secret" in error for error in errors)

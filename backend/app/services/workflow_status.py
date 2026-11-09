@@ -1,6 +1,5 @@
 from app.graph.state import CodeForgeState
 
-
 SUCCESS_STATUSES = {
     "all_tasks_completed",
 }
@@ -26,4 +25,3 @@ def get_workflow_run_status(state: CodeForgeState) -> str:
         return "failed"
 
     return "failed"
-

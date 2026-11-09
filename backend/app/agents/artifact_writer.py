@@ -1,14 +1,9 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from app.graph.state import CodeForgeState
 
-
-TEMPLATE_DIRECTORY = (
-    Path(__file__).resolve().parent.parent
-    / "templates"
-    / "generated_project"
-)
+TEMPLATE_DIRECTORY = Path(__file__).resolve().parent.parent / "templates" / "generated_project"
 
 
 def copy_directory_contents(source: Path, target: Path) -> None:
@@ -33,9 +28,7 @@ def write_generated_files(
     workspace = workspace.resolve()
 
     if not TEMPLATE_DIRECTORY.exists():
-        raise ValueError(
-            f"Generated project template does not exist: {TEMPLATE_DIRECTORY}"
-        )
+        raise ValueError(f"Generated project template does not exist: {TEMPLATE_DIRECTORY}")
 
     # Initialize the workspace with missing template files only.
     copy_directory_contents(TEMPLATE_DIRECTORY, workspace)
@@ -46,9 +39,7 @@ def write_generated_files(
         file_path = (workspace / relative_path).resolve()
 
         if workspace not in file_path.parents:
-            raise ValueError(
-                f"Generated file escapes workspace: {relative_path}"
-            )
+            raise ValueError(f"Generated file escapes workspace: {relative_path}")
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(content, encoding="utf-8")
@@ -61,7 +52,7 @@ def artifact_writer_agent(state: CodeForgeState) -> CodeForgeState:
     workspace = Path(state["workspace"])
 
     try:
-        written_files = write_generated_files(
+        write_generated_files(
             state["files"],
             workspace,
         )
@@ -73,9 +64,7 @@ def artifact_writer_agent(state: CodeForgeState) -> CodeForgeState:
         return state
 
     except Exception as exc:
-        state["validation_errors"] = [
-            f"Artifact writing failed: {exc}"
-        ]
+        state["validation_errors"] = [f"Artifact writing failed: {exc}"]
         state["current_agent"] = "artifact_writer"
         state["status"] = "artifact_write_failed"
 

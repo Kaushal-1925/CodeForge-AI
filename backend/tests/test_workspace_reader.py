@@ -17,9 +17,7 @@ def test_read_workspace_files(tmp_path: Path):
 
     files = read_workspace_files(tmp_path)
 
-    assert files == {
-        "backend/example.py": "print('hello')"
-    }
+    assert files == {"backend/example.py": "print('hello')"}
 
 
 def test_missing_workspace_returns_empty_dict(
@@ -67,4 +65,3 @@ def test_large_files_are_skipped(
     files = read_workspace_files(tmp_path)
 
     assert "large.txt" not in files
-

@@ -1,8 +1,18 @@
+from typing import Any
+
 from app.graph.state import CodeForgeState
 from app.services.llm import create_llm
 
+model: Any | None = None
 
-model = create_llm()
+
+def _get_model() -> Any:
+    global model
+
+    if model is None:
+        model = create_llm()
+
+    return model
 
 
 def architect_agent(state: CodeForgeState) -> CodeForgeState:
@@ -25,7 +35,7 @@ You MUST correct these validation errors:
 Do not repeat the rejected architecture choices.
 """
 
-    response = model.invoke(
+    response = _get_model().invoke(
         f"""
 You are the Software Architect of CodeForge AI.
 

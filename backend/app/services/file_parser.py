@@ -1,6 +1,5 @@
 import re
 
-
 FILE_PATTERN = re.compile(
     r"FILE:\s*(?P<path>[^\n]+)\n"
     r"\s*BEGIN_FILE\n"

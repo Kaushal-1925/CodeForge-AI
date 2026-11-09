@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --canvas: 222 47% 6%;
+  --surface: 222 35% 10%;
+  --border: 217 25% 20%;
+  --foreground: 210 40% 96%;
+  --muted: 215 20% 65%;
+  --accent: 199 89% 58%;
+  --success: 158 64% 52%;
+  --warning: 38 92% 60%;
+  --danger: 0 84% 65%;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, hsl(var(--accent) / 0.12), transparent 32rem),
+    radial-gradient(circle at bottom right, hsl(var(--success) / 0.08), transparent 28rem),
+    hsl(var(--canvas));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: hsl(var(--accent) / 0.35);
+}
+
+a {
+  color: inherit;
+}

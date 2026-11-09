@@ -1,34 +1,26 @@
 from pathlib import Path
 
+import app.graph.workflow as workflow_module
 from app.graph.workflow import (
-    MAX_ARCHITECTURE_RETRIES,
     MAX_ARCHITECTURE_RETRIES,
     MAX_ITERATIONS,
     architecture_retry_router,
-    architecture_retry_router,
     architecture_validation_agent,
-    increment_architecture_retry,
-    mark_architecture_max_retries_reached,
-    increment_architecture_retry,
-    mark_architecture_max_retries_reached,
     artifact_validation_agent,
+    increment_architecture_retry,
     increment_iteration,
+    mark_architecture_max_retries_reached,
     task_progression_router,
     task_validation_agent,
     test_router,
     validation_router,
 )
-import app.graph.workflow as workflow_module
+
 
 def test_artifact_validation_passes_for_valid_artifacts(
     tmp_path: Path,
 ):
-    file_path = (
-        tmp_path
-        / "backend"
-        / "app"
-        / "example.py"
-    )
+    file_path = tmp_path / "backend" / "app" / "example.py"
 
     file_path.parent.mkdir(
         parents=True,
@@ -53,13 +45,9 @@ def test_artifact_validation_passes_for_valid_artifacts(
 
     assert result["validation_errors"] == []
 
-    assert result["status"] == (
-        "artifact_validation_passed"
-    )
+    assert result["status"] == ("artifact_validation_passed")
 
-    assert result["current_agent"] == (
-        "artifact_validator"
-    )
+    assert result["current_agent"] == ("artifact_validator")
 
 
 def test_artifact_validation_fails_for_missing_artifact(
@@ -74,34 +62,23 @@ def test_artifact_validation_fails_for_missing_artifact(
 
     result = artifact_validation_agent(state)
 
-    assert result["status"] == (
-        "artifact_validation_failed"
-    )
+    assert result["status"] == ("artifact_validation_failed")
 
-    assert result["current_agent"] == (
-        "artifact_validator"
-    )
+    assert result["current_agent"] == ("artifact_validator")
 
     assert result["validation_errors"] == [
-        "Generated artifact was not written: "
-        "backend/app/missing.py"
+        "Generated artifact was not written: backend/app/missing.py"
     ]
 
 
 def test_validation_router_passes_when_no_errors():
-    state = {
-        "validation_errors": []
-    }
+    state = {"validation_errors": []}
 
     assert validation_router(state) == "passed"
 
 
 def test_validation_router_fails_when_errors_exist():
-    state = {
-        "validation_errors": [
-            "Invalid generated file"
-        ]
-    }
+    state = {"validation_errors": ["Invalid generated file"]}
 
     assert validation_router(state) == "failed"
 
@@ -122,13 +99,9 @@ def test_architecture_validation_passes_for_valid_architecture():
 
     assert result["validation_errors"] == []
 
-    assert result["status"] == (
-        "architecture_validation_passed"
-    )
+    assert result["status"] == ("architecture_validation_passed")
 
-    assert result["current_agent"] == (
-        "architecture_validator"
-    )
+    assert result["current_agent"] == ("architecture_validator")
 
 
 def test_architecture_validation_fails_for_invalid_architecture():
@@ -142,41 +115,25 @@ def test_architecture_validation_fails_for_invalid_architecture():
 
     result = architecture_validation_agent(state)
 
-    assert (
-        "SQLite is not allowed. CodeForge uses PostgreSQL."
-        in result["validation_errors"]
-    )
+    assert "SQLite is not allowed. CodeForge uses PostgreSQL." in result["validation_errors"]
 
-    assert (
-        "asyncpg is not allowed. Use the existing psycopg driver."
-        in result["validation_errors"]
-    )
+    assert "asyncpg is not allowed. Use the existing psycopg driver." in result["validation_errors"]
 
     assert (
         "Flask is not allowed. The approved backend framework is FastAPI."
         in result["validation_errors"]
     )
 
-    assert result["status"] == (
-        "architecture_validation_failed"
-    )
+    assert result["status"] == ("architecture_validation_failed")
 
-    assert result["current_agent"] == (
-        "architecture_validator"
-    )
+    assert result["current_agent"] == ("architecture_validator")
 
 
 def test_task_validation_passes_for_valid_tasks():
     state = {
         "tasks": [
-            (
-                "Create Task model\n\n"
-                "Implement the Task model using the existing Base."
-            ),
-            (
-                "Create Task API\n\n"
-                "Implement CRUD endpoints using the existing FastAPI app."
-            ),
+            ("Create Task model\n\nImplement the Task model using the existing Base."),
+            ("Create Task API\n\nImplement CRUD endpoints using the existing FastAPI app."),
         ]
     }
 
@@ -190,11 +147,7 @@ def test_task_validation_passes_for_valid_tasks():
 
 
 def test_task_validation_fails_for_invalid_tasks():
-    state = {
-        "tasks": [
-            "Create SQLite database using asyncpg."
-        ]
-    }
+    state = {"tasks": ["Create SQLite database using asyncpg."]}
 
     result = task_validation_agent(state)
 
@@ -206,24 +159,18 @@ def test_task_validation_fails_for_invalid_tasks():
 
 
 def test_task_validation_fails_for_empty_tasks():
-    state = {
-        "tasks": []
-    }
+    state = {"tasks": []}
 
     result = task_validation_agent(state)
 
-    assert result["validation_errors"] == [
-        "No tasks were generated."
-    ]
+    assert result["validation_errors"] == ["No tasks were generated."]
 
     assert result["status"] == "task_validation_failed"
 
 
 def test_test_router_passes_when_tests_pass():
     state = {
-        "test_results": {
-            "status": "passed"
-        },
+        "test_results": {"status": "passed"},
         "iteration": 1,
         "retry_count": 1,
     }
@@ -246,9 +193,7 @@ def test_test_router_retries_when_tests_fail():
 
 def test_test_router_stops_at_max_iterations():
     state = {
-        "test_results": {
-            "status": "failed"
-        },
+        "test_results": {"status": "failed"},
         "iteration": MAX_ITERATIONS,
         "retry_count": MAX_ITERATIONS,
     }
@@ -269,17 +214,13 @@ def test_increment_iteration():
 
 
 def test_task_progression_router_moves_to_next_task():
-    state = {
-        "status": "next_task_ready"
-    }
+    state = {"status": "next_task_ready"}
 
     assert task_progression_router(state) == "next_task"
 
 
 def test_task_progression_router_ends_when_all_tasks_complete():
-    state = {
-        "status": "all_tasks_completed"
-    }
+    state = {"status": "all_tasks_completed"}
 
     assert task_progression_router(state) == "completed"
 
@@ -400,15 +341,9 @@ def test_end_to_end_multi_task_workflow(
         return state
 
     def mock_developer(state):
-        execution_order.append(
-            f"developer:{state['current_task']}"
-        )
+        execution_order.append(f"developer:{state['current_task']}")
 
-        state["files"] = {
-            "backend/app/example.py": (
-                f"# {state['current_task']}\n"
-            )
-        }
+        state["files"] = {"backend/app/example.py": (f"# {state['current_task']}\n")}
 
         state["validation_errors"] = []
         state["current_agent"] = "developer"
@@ -417,9 +352,7 @@ def test_end_to_end_multi_task_workflow(
         return state
 
     def mock_validator(state):
-        execution_order.append(
-            f"validator:{state['current_task']}"
-        )
+        execution_order.append(f"validator:{state['current_task']}")
 
         state["validation_errors"] = []
         state["current_agent"] = "validator"
@@ -428,16 +361,9 @@ def test_end_to_end_multi_task_workflow(
         return state
 
     def mock_artifact_writer(state):
-        execution_order.append(
-            f"artifact_writer:{state['current_task']}"
-        )
+        execution_order.append(f"artifact_writer:{state['current_task']}")
 
-        file_path = (
-            Path(state["workspace"])
-            / "backend"
-            / "app"
-            / "example.py"
-        )
+        file_path = Path(state["workspace"]) / "backend" / "app" / "example.py"
 
         file_path.parent.mkdir(
             parents=True,
@@ -455,9 +381,7 @@ def test_end_to_end_multi_task_workflow(
         return state
 
     def mock_tester(state):
-        execution_order.append(
-            f"tester:{state['current_task']}"
-        )
+        execution_order.append(f"tester:{state['current_task']}")
 
         state["test_results"] = {
             "status": "passed",
@@ -561,22 +485,11 @@ def test_end_to_end_multi_task_workflow(
         "tester:Implement feature three",
     ]
 
-    generated_file = (
-        tmp_path
-        / "backend"
-        / "app"
-        / "example.py"
-    )
+    generated_file = tmp_path / "backend" / "app" / "example.py"
 
     assert generated_file.exists()
 
-    assert (
-        "Implement feature three"
-        in generated_file.read_text(
-            encoding="utf-8"
-        )
-    )
-
+    assert "Implement feature three" in generated_file.read_text(encoding="utf-8")
 
 
 def test_end_to_end_retry_then_continue_to_next_task(
@@ -594,9 +507,7 @@ def test_end_to_end_retry_then_continue_to_next_task(
     def mock_manager(state):
         execution_order.append("manager")
 
-        state["requirements"] = (
-            "Two features are required."
-        )
+        state["requirements"] = "Two features are required."
         state["current_agent"] = "project_manager"
         state["status"] = "manager_completed"
 
@@ -630,13 +541,9 @@ def test_end_to_end_retry_then_continue_to_next_task(
         return state
 
     def mock_developer(state):
-        execution_order.append(
-            f"developer:{state['current_task']}"
-        )
+        execution_order.append(f"developer:{state['current_task']}")
 
-        content = (
-            f"# {state['current_task']}\n"
-        )
+        content = f"# {state['current_task']}\n"
 
         state["files"] = {
             "backend/app/example.py": content,
@@ -649,9 +556,7 @@ def test_end_to_end_retry_then_continue_to_next_task(
         return state
 
     def mock_validator(state):
-        execution_order.append(
-            f"validator:{state['current_task']}"
-        )
+        execution_order.append(f"validator:{state['current_task']}")
 
         state["validation_errors"] = []
         state["current_agent"] = "validator"
@@ -660,16 +565,9 @@ def test_end_to_end_retry_then_continue_to_next_task(
         return state
 
     def mock_artifact_writer(state):
-        execution_order.append(
-            f"artifact_writer:{state['current_task']}"
-        )
+        execution_order.append(f"artifact_writer:{state['current_task']}")
 
-        file_path = (
-            Path(state["workspace"])
-            / "backend"
-            / "app"
-            / "example.py"
-        )
+        file_path = Path(state["workspace"]) / "backend" / "app" / "example.py"
 
         file_path.parent.mkdir(
             parents=True,
@@ -677,9 +575,7 @@ def test_end_to_end_retry_then_continue_to_next_task(
         )
 
         file_path.write_text(
-            state["files"][
-                "backend/app/example.py"
-            ],
+            state["files"]["backend/app/example.py"],
             encoding="utf-8",
         )
 
@@ -693,10 +589,7 @@ def test_end_to_end_retry_then_continue_to_next_task(
 
         tester_calls += 1
 
-        execution_order.append(
-            f"tester:{state['current_task']}"
-            f":attempt_{tester_calls}"
-        )
+        execution_order.append(f"tester:{state['current_task']}:attempt_{tester_calls}")
 
         if tester_calls == 1:
             state["test_results"] = {
@@ -771,9 +664,7 @@ def test_end_to_end_retry_then_continue_to_next_task(
 
     initial_state = {
         "workspace": str(tmp_path),
-        "user_request": (
-            "Build a two-feature application."
-        ),
+        "user_request": ("Build a two-feature application."),
         "requirements": "",
         "architecture": "",
         "tasks": [],
@@ -789,13 +680,9 @@ def test_end_to_end_retry_then_continue_to_next_task(
         "architecture_retry_count": 0,
     }
 
-    final_state = graph.invoke(
-        initial_state
-    )
+    final_state = graph.invoke(initial_state)
 
-    assert final_state["status"] == (
-        "all_tasks_completed"
-    )
+    assert final_state["status"] == ("all_tasks_completed")
 
     assert final_state["current_task"] == ""
 
@@ -823,21 +710,12 @@ def test_end_to_end_retry_then_continue_to_next_task(
         "tester:Implement feature two:attempt_3",
     ]
 
-    generated_file = (
-        tmp_path
-        / "backend"
-        / "app"
-        / "example.py"
-    )
+    generated_file = tmp_path / "backend" / "app" / "example.py"
 
     assert generated_file.exists()
 
-    assert (
-        "Implement feature two"
-        in generated_file.read_text(
-            encoding="utf-8"
-        )
-    )
+    assert "Implement feature two" in generated_file.read_text(encoding="utf-8")
+
 
 def test_architecture_retry_router_passes_when_architecture_is_valid():
     state = {
@@ -850,9 +728,7 @@ def test_architecture_retry_router_passes_when_architecture_is_valid():
 
 def test_architecture_retry_router_retries_when_errors_exist():
     state = {
-        "validation_errors": [
-            "SQLite is not allowed. CodeForge uses PostgreSQL."
-        ],
+        "validation_errors": ["SQLite is not allowed. CodeForge uses PostgreSQL."],
         "architecture_retry_count": 1,
     }
 
@@ -861,9 +737,7 @@ def test_architecture_retry_router_retries_when_errors_exist():
 
 def test_architecture_retry_router_stops_at_max_retries():
     state = {
-        "validation_errors": [
-            "SQLite is not allowed. CodeForge uses PostgreSQL."
-        ],
+        "validation_errors": ["SQLite is not allowed. CodeForge uses PostgreSQL."],
         "architecture_retry_count": MAX_ARCHITECTURE_RETRIES,
     }
 
@@ -872,9 +746,7 @@ def test_architecture_retry_router_stops_at_max_retries():
 
 def test_increment_architecture_retry():
     state = {
-        "validation_errors": [
-            "Invalid architecture"
-        ],
+        "validation_errors": ["Invalid architecture"],
         "architecture_retry_count": 0,
         "current_agent": "architecture_validator",
     }
@@ -882,16 +754,12 @@ def test_increment_architecture_retry():
     result = increment_architecture_retry(state)
 
     assert result["architecture_retry_count"] == 1
-    assert result["current_agent"] == (
-        "architecture_validator"
-    )
+    assert result["current_agent"] == ("architecture_validator")
 
 
 def test_mark_architecture_max_retries_reached():
     state = {
-        "validation_errors": [
-            "Invalid architecture"
-        ],
+        "validation_errors": ["Invalid architecture"],
         "architecture_retry_count": MAX_ARCHITECTURE_RETRIES,
         "current_agent": "architecture_validator",
         "status": "architecture_validation_failed",
@@ -900,6 +768,4 @@ def test_mark_architecture_max_retries_reached():
     result = mark_architecture_max_retries_reached(state)
 
     assert result["current_agent"] == "workflow"
-    assert result["status"] == (
-        "max_architecture_retries_reached"
-    )
+    assert result["status"] == ("max_architecture_retries_reached")

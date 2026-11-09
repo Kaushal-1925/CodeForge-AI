@@ -16,32 +16,20 @@ def validate_written_artifacts(
         file_path = (workspace / relative_path).resolve()
 
         if workspace not in file_path.parents:
-            errors.append(
-                f"Artifact escapes workspace: {relative_path}"
-            )
+            errors.append(f"Artifact escapes workspace: {relative_path}")
             continue
 
         if not file_path.exists():
-            errors.append(
-                f"Generated artifact was not written: {relative_path}"
-            )
+            errors.append(f"Generated artifact was not written: {relative_path}")
             continue
 
         if not file_path.is_file():
-            errors.append(
-                f"Generated artifact is not a file: {relative_path}"
-            )
+            errors.append(f"Generated artifact is not a file: {relative_path}")
             continue
 
-        actual_content = file_path.read_text(
-            encoding="utf-8"
-        )
+        actual_content = file_path.read_text(encoding="utf-8")
 
         if actual_content != expected_content:
-            errors.append(
-                f"Generated artifact content does not match: "
-                f"{relative_path}"
-            )
+            errors.append(f"Generated artifact content does not match: {relative_path}")
 
     return errors
-

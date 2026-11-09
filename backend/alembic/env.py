@@ -3,10 +3,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.config import settings
+from app.core.config import get_settings
 from app.database.base import Base
-from app.models.project import Project
-from app.models.workflow_run import WorkflowRun
 
 config = context.config
 
@@ -18,7 +16,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = settings.database_url
+    url = get_settings().database_url
 
     context.configure(
         url=url,
@@ -37,7 +35,7 @@ def run_migrations_online() -> None:
         {},
     )
 
-    configuration["sqlalchemy.url"] = settings.database_url
+    configuration["sqlalchemy.url"] = get_settings().database_url
 
     connectable = engine_from_config(
         configuration,

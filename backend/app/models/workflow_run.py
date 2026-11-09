@@ -47,6 +47,13 @@ class WorkflowRun(Base):
         default=0,
     )
 
+    approval_status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="pending",
+        server_default="pending",
+    )
+
     started_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

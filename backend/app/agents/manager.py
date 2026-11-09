@@ -1,12 +1,22 @@
+from typing import Any
+
 from app.graph.state import CodeForgeState
 from app.services.llm import create_llm
 
+model: Any | None = None
 
-model = create_llm()
+
+def _get_model() -> Any:
+    global model
+
+    if model is None:
+        model = create_llm()
+
+    return model
 
 
 def manager_agent(state: CodeForgeState) -> CodeForgeState:
-    response = model.invoke(
+    response = _get_model().invoke(
         f"""
 You are the Project Manager of CodeForge AI.
 

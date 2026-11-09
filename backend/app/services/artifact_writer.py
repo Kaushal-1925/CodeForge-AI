@@ -1,12 +1,7 @@
 import shutil
 from pathlib import Path
 
-
-TEMPLATE_DIRECTORY = (
-    Path(__file__).resolve().parent.parent
-    / "templates"
-    / "generated_project"
-)
+TEMPLATE_DIRECTORY = Path(__file__).resolve().parent.parent / "templates" / "generated_project"
 
 
 def copy_directory_contents(
@@ -40,10 +35,7 @@ def write_generated_files(
     workspace = workspace.resolve()
 
     if not TEMPLATE_DIRECTORY.exists():
-        raise ValueError(
-            "Generated project template does not exist: "
-            f"{TEMPLATE_DIRECTORY}"
-        )
+        raise ValueError(f"Generated project template does not exist: {TEMPLATE_DIRECTORY}")
 
     copy_directory_contents(
         TEMPLATE_DIRECTORY,
@@ -53,15 +45,10 @@ def write_generated_files(
     written_files: list[Path] = []
 
     for relative_path, content in files.items():
-        file_path = (
-            workspace / relative_path
-        ).resolve()
+        file_path = (workspace / relative_path).resolve()
 
         if workspace not in file_path.parents:
-            raise ValueError(
-                f"Generated file escapes workspace: "
-                f"{relative_path}"
-            )
+            raise ValueError(f"Generated file escapes workspace: {relative_path}")
 
         file_path.parent.mkdir(
             parents=True,

@@ -70,14 +70,8 @@ def test_task_planner_creates_ordered_tasks(monkeypatch):
     result = task_planner.task_planner_agent(state)
 
     assert len(result["tasks"]) == 2
-    assert result["tasks"][0] == (
-        "Create Task model\n\n"
-        "Implement the SQLAlchemy Task model."
-    )
-    assert result["tasks"][1] == (
-        "Create Task API\n\n"
-        "Implement the Task CRUD API endpoints."
-    )
+    assert result["tasks"][0] == ("Create Task model\n\nImplement the SQLAlchemy Task model.")
+    assert result["tasks"][1] == ("Create Task API\n\nImplement the Task CRUD API endpoints.")
     assert result["current_task_index"] == 0
     assert result["current_task"] == result["tasks"][0]
     assert result["current_agent"] == "task_planner"

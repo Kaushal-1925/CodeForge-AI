@@ -46,9 +46,7 @@ def update_workflow_run(
     )
 
     if workflow_run is None:
-        raise ValueError(
-            f"Workflow run not found: {workflow_run_id}"
-        )
+        raise ValueError(f"Workflow run not found: {workflow_run_id}")
 
     if status is not None:
         workflow_run.status = status
@@ -82,12 +80,35 @@ def complete_workflow_run(
     )
 
     if workflow_run is None:
-        raise ValueError(
-            f"Workflow run not found: {workflow_run_id}"
-        )
+        raise ValueError(f"Workflow run not found: {workflow_run_id}")
 
     workflow_run.status = "completed"
     workflow_run.completed_at = datetime.utcnow()
+
+    try:
+        db.commit()
+        db.refresh(workflow_run)
+    except Exception:
+        db.rollback()
+        raise
+
+    return workflow_run
+
+
+def set_workflow_run_approval(
+    db: Session,
+    workflow_run_id: UUID,
+    approval_status: str,
+) -> WorkflowRun:
+    workflow_run = db.get(
+        WorkflowRun,
+        workflow_run_id,
+    )
+
+    if workflow_run is None:
+        raise ValueError(f"Workflow run not found: {workflow_run_id}")
+
+    workflow_run.approval_status = approval_status
 
     try:
         db.commit()

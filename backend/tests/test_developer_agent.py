@@ -5,6 +5,7 @@ from app.agents.developer import developer_agent
 
 class FakeResponse:
     content = ""
+    text = ""
 
 
 class FakeModel:
