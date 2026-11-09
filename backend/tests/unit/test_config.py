@@ -5,7 +5,7 @@ from app.core.config import Settings
 
 
 def test_defaults_are_safe_for_local_development() -> None:
-    settings = Settings.model_validate({})
+    settings = Settings(_env_file=None)
 
     assert settings.app_name == "CodeForge AI"
     assert settings.environment == "development"
@@ -59,7 +59,7 @@ def test_api_prefix_trailing_slash_is_removed() -> None:
 
 
 def test_llm_defaults_target_deepseek() -> None:
-    settings = Settings.model_validate({})
+    settings = Settings(_env_file=None)
 
     assert settings.llm_provider == "deepseek"
     assert settings.llm_model == "deepseek-chat"
