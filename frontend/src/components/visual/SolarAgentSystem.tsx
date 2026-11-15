@@ -710,43 +710,26 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const tempVec = new THREE.Vector3();
 
       let isSystemPaused = false;
-      let isSystemTurning = false;
-      let frameCounter = 0;
 
-      // Intelligent Rendering Strategy: Pause WebGL when workspace is revealed (p >= 0.95),
-      // throttle during active curl (p > 0.02) to maximize GPU compositor smoothness.
-      const handlePageState = (e: Event) => {
-        const customEv = e as CustomEvent<{ state: string; progress: number }>;
-        if (!customEv.detail) return;
-        const state = customEv.detail.state;
-        if (state === "hidden") {
-          isSystemPaused = true;
-          isSystemTurning = false;
-        } else if (state === "turning") {
-          isSystemPaused = false;
-          isSystemTurning = true;
-          // Hide DOM labels when page is actively curling to eliminate 8 DOM mutations per frame
-          planetsList.forEach((p) => {
-            const labelEl = document.getElementById(`label-${p.data.key}`);
-            if (labelEl) {
-              labelEl.style.display = "none";
-              labelEl.style.opacity = "0";
-            }
+      // Intelligent Rendering: Automatically pause WebGL loop when scrolled out of view or tab inactive
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            isSystemPaused = !entry.isIntersecting;
           });
-        } else if (state === "cover") {
-          isSystemPaused = false;
-          isSystemTurning = false;
-        }
-      };
-
-      window.addEventListener("codeforge-page-state", handlePageState);
+        },
+        { threshold: 0.05 }
+      );
+      if (container) {
+        observer.observe(container);
+      }
 
       const handleVisibilityChange = () => {
         if (document.hidden) {
           isSystemPaused = true;
-        } else {
-          const isAtWorkspace = typeof window !== "undefined" && window.scrollY >= (window.innerHeight * 0.5);
-          isSystemPaused = isAtWorkspace;
+        } else if (container) {
+          const rect = container.getBoundingClientRect();
+          isSystemPaused = rect.bottom <= 0 || rect.top >= window.innerHeight;
         }
       };
       document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -756,14 +739,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
 
-        // 1. If paused (hidden behind workspace or browser tab inactive), halt WebGL rendering completely
+        // Pause WebGL rendering when scrolled out of view or tab inactive (0 FPS, zero GPU load)
         if (isSystemPaused) {
-          return;
-        }
-
-        // 2. If actively turning, throttle scene rendering to 30 FPS to yield GPU power to page compositor
-        frameCounter++;
-        if (isSystemTurning && (frameCounter % 2 !== 0)) {
           return;
         }
 
@@ -809,30 +786,28 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           }
         });
 
-        // 3. Only project & update DOM labels when on the flat cover (not during 3D page turn)
-        if (!isSystemTurning) {
-          planetsList.forEach((p) => {
-            const labelEl = document.getElementById(`label-${p.data.key}`);
-            if (!labelEl) return;
+        // Update DOM labels smoothly
+        planetsList.forEach((p) => {
+          const labelEl = document.getElementById(`label-${p.data.key}`);
+          if (!labelEl) return;
 
-            p.mesh.getWorldPosition(tempVec);
-            tempVec.y -= p.data.displayRadius * 1.35;
-            tempVec.project(camera);
+          p.mesh.getWorldPosition(tempVec);
+          tempVec.y -= p.data.displayRadius * 1.35;
+          tempVec.project(camera);
 
-            const inFront = tempVec.z < 1.0;
-            const screenX = (tempVec.x * 0.5 + 0.5) * width;
-            const screenY = (-tempVec.y * 0.5 + 0.5) * height;
+          const inFront = tempVec.z < 1.0;
+          const screenX = (tempVec.x * 0.5 + 0.5) * width;
+          const screenY = (-tempVec.y * 0.5 + 0.5) * height;
 
-            if (inFront && screenX > -80 && screenX < width + 80 && screenY > -50 && screenY < height + 50) {
-              labelEl.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0)`;
-              labelEl.style.opacity = "1";
-              labelEl.style.display = "block";
-            } else {
-              labelEl.style.opacity = "0";
-              labelEl.style.display = "none";
-            }
-          });
-        }
+          if (inFront && screenX > -80 && screenX < width + 80 && screenY > -50 && screenY < height + 50) {
+            labelEl.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0)`;
+            labelEl.style.opacity = "1";
+            labelEl.style.display = "block";
+          } else {
+            labelEl.style.opacity = "0";
+            labelEl.style.display = "none";
+          }
+        });
 
         stars.rotation.y = elapsed * 0.003;
         renderer!.render(scene, camera);
@@ -853,8 +828,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
       return () => {
         cancelAnimationFrame(animationFrameId);
+        observer.disconnect();
         window.removeEventListener("resize", handleResize);
-        window.removeEventListener("codeforge-page-state", handlePageState);
         document.removeEventListener("visibilitychange", handleVisibilityChange);
         renderer!.domElement.removeEventListener("pointerdown", handlePointerDown);
         renderer!.domElement.removeEventListener("pointerup", handlePointerUp);
@@ -922,40 +897,26 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     let animationFrameId: number;
     let lastTime = performance.now();
     let is2DPaused = false;
-    let is2DTurning = false;
-    let frameCounter2D = 0;
 
-    const handlePageState2D = (e: Event) => {
-      const customEv = e as CustomEvent<{ state: string; progress: number }>;
-      if (!customEv.detail) return;
-      const state = customEv.detail.state;
-      if (state === "hidden") {
-        is2DPaused = true;
-        is2DTurning = false;
-      } else if (state === "turning") {
-        is2DPaused = false;
-        is2DTurning = true;
-        PLANETS.forEach((planet) => {
-          const labelEl = document.getElementById(`label-${planet.key}`);
-          if (labelEl) {
-            labelEl.style.display = "none";
-            labelEl.style.opacity = "0";
-          }
+    // Intelligent Rendering: Automatically pause 2D canvas loop when scrolled out of view or tab inactive
+    const observer2D = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          is2DPaused = !entry.isIntersecting;
         });
-      } else if (state === "cover") {
-        is2DPaused = false;
-        is2DTurning = false;
-      }
-    };
-
-    window.addEventListener("codeforge-page-state", handlePageState2D);
+      },
+      { threshold: 0.05 }
+    );
+    if (container) {
+      observer2D.observe(container);
+    }
 
     const handleVisibilityChange2D = () => {
       if (document.hidden) {
         is2DPaused = true;
-      } else {
-        const isAtWorkspace = typeof window !== "undefined" && window.scrollY >= (window.innerHeight * 0.5);
-        is2DPaused = isAtWorkspace;
+      } else if (container) {
+        const rect = container.getBoundingClientRect();
+        is2DPaused = rect.bottom <= 0 || rect.top >= window.innerHeight;
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange2D);
@@ -990,11 +951,6 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       animationFrameId = requestAnimationFrame(animate2D);
 
       if (is2DPaused) {
-        return;
-      }
-
-      frameCounter2D++;
-      if (is2DTurning && (frameCounter2D % 2 !== 0)) {
         return;
       }
 
@@ -1146,14 +1102,12 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           ctx.restore();
         }
 
-        // Update 2D Floating Label (only when on flat cover)
-        if (!is2DTurning) {
-          const labelEl = document.getElementById(`label-${planet.key}`);
-          if (labelEl) {
-            labelEl.style.transform = `translate3d(${px.toFixed(1)}px, ${(py + pr + 12).toFixed(1)}px, 0)`;
-            labelEl.style.opacity = "1";
-            labelEl.style.display = "block";
-          }
+        // Update 2D Floating Label
+        const labelEl = document.getElementById(`label-${planet.key}`);
+        if (labelEl) {
+          labelEl.style.transform = `translate3d(${px.toFixed(1)}px, ${(py + pr + 12).toFixed(1)}px, 0)`;
+          labelEl.style.opacity = "1";
+          labelEl.style.display = "block";
         }
       });
     };
@@ -1172,8 +1126,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      observer2D.disconnect();
       window.removeEventListener("resize", handleResize2D);
-      window.removeEventListener("codeforge-page-state", handlePageState2D);
       document.removeEventListener("visibilitychange", handleVisibilityChange2D);
       canvas.removeEventListener("click", handleCanvasClick);
       if (container.contains(canvas)) {
