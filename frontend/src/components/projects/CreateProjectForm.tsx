@@ -8,12 +8,12 @@ import type { Project } from "@/lib/api/types";
 
 const STARTER_TEMPLATES = [
   {
-    label: "Expense Tracker CLI",
+    label: "Expense Tracker",
     name: "Expense Tracker CLI",
-    desc: "Lightweight command-line expense logger with category totals and CSV export.",
+    desc: "Command-line expense logger with category totals and CSV export.",
   },
   {
-    label: "URL Shortener API",
+    label: "URL Shortener",
     name: "URL Shortener Service",
     desc: "FastAPI service with 6-character shortlinks, click counts, and redirect routes.",
   },
@@ -71,8 +71,8 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
     <form className="space-y-4" onSubmit={handleSubmit}>
       {/* Quick Template Selector */}
       <div>
-        <span className="text-xs font-medium uppercase tracking-wide text-muted">
-          Quick Starters
+        <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">
+          Templates
         </span>
         <div className="mt-2 flex flex-wrap gap-2">
           {STARTER_TEMPLATES.map((tpl) => (
@@ -81,7 +81,7 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
               type="button"
               onClick={() => applyTemplate(tpl)}
               disabled={submitting}
-              className="rounded-lg border border-border/70 bg-surface/50 px-2.5 py-1 text-xs text-muted transition hover:border-accent/60 hover:bg-accent/10 hover:text-foreground"
+              className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-xs text-neutral-400 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
             >
               + {tpl.label}
             </button>
@@ -90,13 +90,13 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
       </div>
 
       <div>
-        <label className="text-xs font-medium uppercase tracking-wide text-muted" htmlFor="name">
+        <label className="text-xs font-medium uppercase tracking-wider text-neutral-400" htmlFor="name">
           Project name
         </label>
         <input
           id="name"
           name="name"
-          className="mt-2 w-full rounded-xl border border-border bg-canvas/70 px-3 py-2 text-sm outline-none transition focus:border-accent/70 focus:ring-2 focus:ring-accent/20"
+          className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/80 px-3 py-2 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-white/30 focus:ring-1 focus:ring-white/20"
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Invoice management service"
@@ -107,7 +107,7 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
       </div>
       <div>
         <label
-          className="text-xs font-medium uppercase tracking-wide text-muted"
+          className="text-xs font-medium uppercase tracking-wider text-neutral-400"
           htmlFor="description"
         >
           Description
@@ -115,7 +115,7 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
         <textarea
           id="description"
           name="description"
-          className="mt-2 min-h-24 w-full resize-y rounded-xl border border-border bg-canvas/70 px-3 py-2 text-sm outline-none transition focus:border-accent/70 focus:ring-2 focus:ring-accent/20"
+          className="mt-2 min-h-24 w-full resize-y rounded-xl border border-white/[0.08] bg-[#0c0d12]/80 px-3 py-2 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-white/30 focus:ring-1 focus:ring-white/20"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="What should this project provide?"
@@ -123,7 +123,7 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
         />
       </div>
       {error && (
-        <p className="text-sm text-danger" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

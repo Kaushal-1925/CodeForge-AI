@@ -37,10 +37,10 @@ type ArtifactsState =
   | { status: "error"; message: string };
 
 const AGENT_PIPELINE = [
-  { key: "architect", name: "Architect", color: "#00e5ff" },
-  { key: "tech_lead", name: "Tech Lead", color: "#10b981" },
-  { key: "developer", name: "Developer", color: "#a855f7" },
-  { key: "tester", name: "Tester", color: "#f59e0b" },
+  { key: "architect", name: "Architect", color: "#60a5fa" },
+  { key: "tech_lead", name: "Tech Lead", color: "#34d399" },
+  { key: "developer", name: "Developer", color: "#c084fc" },
+  { key: "tester", name: "Tester", color: "#fbbf24" },
 ];
 
 export function RunDetail({ projectId, runId }: RunDetailProps) {
@@ -135,22 +135,22 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
   if (state.status === "loading") {
     return (
       <Card>
-        <p className="text-sm text-muted">Loading workflow run...</p>
+        <p className="text-sm text-neutral-400">Loading workflow run...</p>
       </Card>
     );
   }
 
   if (state.status === "error") {
     return (
-      <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-6" role="alert">
-        <p className="text-sm font-medium text-danger">Unable to load this workflow run.</p>
-        <p className="mt-2 text-sm text-muted">{state.message}</p>
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-6 backdrop-blur-xl" role="alert">
+        <p className="text-sm font-medium text-red-400">Unable to load this workflow run.</p>
+        <p className="mt-2 text-sm text-neutral-400">{state.message}</p>
         <div className="mt-4 flex gap-3">
           <Button variant="secondary" onClick={refresh}>
             Retry
           </Button>
           <Link
-            className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-muted transition hover:bg-white/5 hover:text-foreground"
+            className="inline-flex items-center justify-center rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-neutral-400 transition hover:bg-white/[0.04] hover:text-white"
             href={`/projects/${projectId}`}
           >
             Back to project
@@ -164,22 +164,22 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
 
   return (
     <div className="space-y-8">
-      <nav className="text-sm text-muted">
-        <Link className="transition hover:text-foreground" href="/">
+      <nav className="text-sm text-neutral-500">
+        <Link className="transition hover:text-white" href="/">
           Projects
         </Link>
         <span className="mx-2">/</span>
-        <Link className="transition hover:text-foreground" href={`/projects/${projectId}`}>
+        <Link className="transition hover:text-white" href={`/projects/${projectId}`}>
           Project
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-foreground">Run {currentRun.id.slice(0, 8)}</span>
+        <span className="text-white">Run {currentRun.id.slice(0, 8)}</span>
       </nav>
 
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border/70 pb-6">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-white/[0.06] pb-6">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Workflow run</p>
-          <h1 className="mt-2 max-w-3xl text-2xl font-semibold leading-tight tracking-tight text-foreground">
+          <p className="text-xs font-mono uppercase tracking-wider text-neutral-500">Workflow run</p>
+          <h1 className="mt-2 max-w-3xl text-2xl font-semibold leading-tight tracking-tight text-white">
             {currentRun.user_request}
           </h1>
         </div>
@@ -195,10 +195,10 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
         </div>
       </header>
 
-      {/* Visual Multi-Agent Pipeline Graph */}
-      <section className="rounded-2xl border border-border/80 bg-surface/40 p-4 backdrop-blur-md">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Multi-Agent Pipeline</p>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Visual Multi-Agent Pipeline */}
+      <section className="rounded-2xl border border-white/[0.06] bg-[#121318]/50 p-4 backdrop-blur-xl">
+        <p className="text-xs font-mono uppercase tracking-wider text-neutral-500">Agent Progression</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {AGENT_PIPELINE.map((stage, idx) => {
             const isActive =
               currentRun.current_agent &&
@@ -210,32 +210,29 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
                 key={stage.key}
                 className={`relative flex items-center gap-3 rounded-xl border p-3 transition-all ${
                   isActive
-                    ? "border-accent bg-accent/15 shadow-md shadow-accent/20"
+                    ? "border-white/30 bg-white/[0.08] shadow-lg"
                     : isFinished
-                    ? "border-emerald-500/30 bg-emerald-500/5 text-muted"
-                    : "border-border/60 bg-canvas/40 text-muted"
+                    ? "border-emerald-500/20 bg-emerald-500/[0.03] text-neutral-400"
+                    : "border-white/[0.05] bg-black/20 text-neutral-500"
                 }`}
               >
                 <div
-                  className="grid h-7 w-7 place-items-center rounded-lg font-mono text-xs font-semibold"
+                  className="grid h-6 w-6 place-items-center rounded-md font-mono text-xs font-semibold"
                   style={{
-                    backgroundColor: isActive ? stage.color : "rgba(255,255,255,0.05)",
-                    color: isActive ? "#000" : stage.color,
+                    backgroundColor: isActive ? "#ffffff" : "rgba(255,255,255,0.06)",
+                    color: isActive ? "#000000" : stage.color,
                   }}
                 >
                   {idx + 1}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-foreground truncate">{stage.name}</p>
-                  <p className="text-[10px] text-muted truncate">
-                    {isActive ? "Active Agent" : isFinished ? "Completed" : "Standby"}
+                  <p className="text-xs font-medium text-white truncate">{stage.name}</p>
+                  <p className="text-[10px] text-neutral-500 truncate font-mono">
+                    {isActive ? "Active" : isFinished ? "Passed" : "Standby"}
                   </p>
                 </div>
                 {isActive && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-                  </span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                 )}
               </div>
             );
@@ -257,41 +254,41 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
             </Button>
           </div>
 
-          <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+          <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Current agent</dt>
-              <dd className="mt-1 font-medium">
+              <dt className="text-xs uppercase tracking-wider text-neutral-500">Current agent</dt>
+              <dd className="mt-1 font-medium text-white">
                 {currentRun.current_agent ? formatStatus(currentRun.current_agent) : "Not recorded"}
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Current task</dt>
-              <dd className="mt-1 font-medium">{currentRun.current_task ?? "Not recorded"}</dd>
+              <dt className="text-xs uppercase tracking-wider text-neutral-500">Current task</dt>
+              <dd className="mt-1 font-medium text-white">{currentRun.current_task ?? "Not recorded"}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Iteration</dt>
-              <dd className="mt-1 font-medium">{currentRun.iteration}</dd>
+              <dt className="text-xs uppercase tracking-wider text-neutral-500">Iteration</dt>
+              <dd className="mt-1 font-mono font-medium text-white">{currentRun.iteration}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Started</dt>
-              <dd className="mt-1 font-medium">{formatTimestamp(currentRun.started_at)}</dd>
+              <dt className="text-xs uppercase tracking-wider text-neutral-500">Started</dt>
+              <dd className="mt-1 font-medium text-neutral-300">{formatTimestamp(currentRun.started_at)}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Completed</dt>
-              <dd className="mt-1 font-medium">{formatTimestamp(currentRun.completed_at)}</dd>
+              <dt className="text-xs uppercase tracking-wider text-neutral-500">Completed</dt>
+              <dd className="mt-1 font-medium text-neutral-300">{formatTimestamp(currentRun.completed_at)}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Approval</dt>
-              <dd className="mt-1 font-medium">
+              <dt className="text-xs uppercase tracking-wider text-neutral-500">Approval</dt>
+              <dd className="mt-1 font-medium text-neutral-300">
                 {approvalStatusLabel(currentRun.approval_status)}
               </dd>
             </div>
           </dl>
 
           {!terminal && (
-            <p className="mt-5 flex items-center gap-2 text-xs text-muted" aria-live="polite">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-warning" aria-hidden="true" />
-              Workflow in progress. This page refreshes every {POLL_INTERVAL_MS / 1000} seconds.
+            <p className="mt-5 flex items-center gap-2 text-xs text-neutral-400" aria-live="polite">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" aria-hidden="true" />
+              Workflow in progress. Polling every {POLL_INTERVAL_MS / 1000} seconds.
             </p>
           )}
         </Card>
@@ -318,30 +315,30 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
 
       <section aria-labelledby="artifacts-heading">
         <div className="mb-4">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Review</p>
-          <h2 id="artifacts-heading" className="mt-2 text-2xl font-semibold tracking-tight">
+          <p className="text-xs font-mono uppercase tracking-wider text-neutral-500">Review</p>
+          <h2 id="artifacts-heading" className="mt-1 text-2xl font-semibold tracking-tight text-white">
             Generated artifacts
           </h2>
         </div>
 
         <div aria-live="polite">
           {!terminal && (
-            <div className="rounded-xl border border-dashed border-border/80 px-4 py-8 text-center text-sm text-muted">
+            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] px-4 py-8 text-center text-sm text-neutral-500">
               Artifacts will appear here after the run reaches a terminal state.
             </div>
           )}
 
           {terminal && artifacts.status === "idle" && (
             <div className="space-y-3">
-              <div className="h-12 animate-pulse rounded-xl bg-white/5" />
-              <div className="h-40 animate-pulse rounded-xl bg-white/5" />
+              <div className="h-12 animate-pulse rounded-2xl bg-white/[0.04]" />
+              <div className="h-40 animate-pulse rounded-2xl bg-white/[0.04]" />
             </div>
           )}
 
           {terminal && artifacts.status === "error" && (
-            <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-6" role="alert">
-              <p className="text-sm font-medium text-danger">Unable to load generated artifacts.</p>
-              <p className="mt-2 text-sm text-muted">{artifacts.message}</p>
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-6 backdrop-blur-xl" role="alert">
+              <p className="text-sm font-medium text-red-400">Unable to load generated artifacts.</p>
+              <p className="mt-2 text-sm text-neutral-400">{artifacts.message}</p>
               <Button variant="secondary" className="mt-4" onClick={refreshArtifacts}>
                 Retry
               </Button>

@@ -19,32 +19,32 @@ export const AGENT_REGISTRY: Record<AgentKey, AgentInfo> = {
     key: "architect",
     name: "Architect Agent",
     role: "System Architecture & Contracts",
-    color: "#00e5ff",
-    hex: 0x00e5ff,
+    color: "#60a5fa",
+    hex: 0x60a5fa,
     description: "Transforms user requests into architectural blueprints, data models, and API contracts.",
   },
   tech_lead: {
     key: "tech_lead",
     name: "Tech Lead Agent",
     role: "Task Decomposition & Strategy",
-    color: "#10b981",
-    hex: 0x10b981,
+    color: "#34d399",
+    hex: 0x34d399,
     description: "Deconstructs blueprints into ordered, atomic engineering tasks with clear acceptance criteria.",
   },
   developer: {
     key: "developer",
     name: "Developer Agent",
     role: "Code Implementation",
-    color: "#a855f7",
-    hex: 0xa855f7,
+    color: "#c084fc",
+    hex: 0xc084fc,
     description: "Executes engineering tasks, generates typed source files, module imports, and runtime configs.",
   },
   tester: {
     key: "tester",
     name: "Tester Agent",
     role: "Test Generation & Quality",
-    color: "#f59e0b",
-    hex: 0xf59e0b,
+    color: "#fbbf24",
+    hex: 0xfbbf24,
     description: "Builds comprehensive unit test suites, executes pytest runs in sandboxes, and validates fixes.",
   },
 };
@@ -82,10 +82,10 @@ export function AgentForgeScene({
 
     // Scene & Camera
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x060913, 0.08);
+    scene.fog = new THREE.FogExp2(0x090a0d, 0.06);
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 1.8, 6.5);
+    camera.position.set(0, 1.6, 6.2);
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({
@@ -96,61 +96,61 @@ export function AgentForgeScene({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.0;
     container.appendChild(renderer.domElement);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Subtle Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const coreLight = new THREE.PointLight(0x00e5ff, 2.5, 12);
+    const coreLight = new THREE.PointLight(0xffffff, 1.5, 10);
     coreLight.position.set(0, 0, 0);
     scene.add(coreLight);
 
-    // 1. Central "Forge Core"
+    // 1. Central Titanium Core
     const coreGroup = new THREE.Group();
     scene.add(coreGroup);
 
     // Outer wireframe icosahedron
     const coreGeo = new THREE.IcosahedronGeometry(1.0, 1);
     const coreWireMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
+      color: 0x94a3b8,
       wireframe: true,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.28,
     });
     const coreWire = new THREE.Mesh(coreGeo, coreWireMat);
     coreGroup.add(coreWire);
 
-    // Inner glowing sphere
+    // Inner frosted core
     const innerGeo = new THREE.SphereGeometry(0.55, 16, 16);
     const innerMat = new THREE.MeshBasicMaterial({
-      color: 0x0ea5e9,
+      color: 0xe2e8f0,
       wireframe: true,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.35,
     });
     const innerCore = new THREE.Mesh(innerGeo, innerMat);
     coreGroup.add(innerCore);
 
-    // 2. Orbital Rings
-    const ringGeo1 = new THREE.RingGeometry(2.4, 2.43, 64);
+    // 2. Minimalist Orbital Rings
+    const ringGeo1 = new THREE.RingGeometry(2.4, 2.42, 64);
     const ringMat1 = new THREE.MeshBasicMaterial({
-      color: 0x1e293b,
+      color: 0x334155,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.25,
     });
     const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
     ring1.rotation.x = Math.PI / 2.3;
     scene.add(ring1);
 
-    const ringGeo2 = new THREE.RingGeometry(3.3, 3.33, 64);
+    const ringGeo2 = new THREE.RingGeometry(3.3, 3.32, 64);
     const ringMat2 = new THREE.MeshBasicMaterial({
-      color: 0x334155,
+      color: 0x1e293b,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.2,
     });
     const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
     ring2.rotation.x = Math.PI / 1.7;
@@ -176,27 +176,27 @@ export function AgentForgeScene({
       const info = AGENT_REGISTRY[key];
       const radius = 2.4 + index * 0.35;
       const angle = (index / agentKeys.length) * Math.PI * 2;
-      const yOffset = Math.sin(index * 1.5) * 0.4;
+      const yOffset = Math.sin(index * 1.5) * 0.35;
 
-      // Node Geometry
-      const nodeGeo = new THREE.OctahedronGeometry(0.24, 0);
+      // Node Geometry (Minimalist Octahedron)
+      const nodeGeo = new THREE.OctahedronGeometry(0.22, 0);
       const nodeMat = new THREE.MeshStandardMaterial({
         color: info.hex,
-        roughness: 0.2,
-        metalness: 0.8,
+        roughness: 0.3,
+        metalness: 0.9,
         emissive: info.hex,
-        emissiveIntensity: 0.5,
+        emissiveIntensity: 0.35,
       });
       const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
       nodeMesh.userData = { agentKey: key };
 
-      // Outer Glow Halo
-      const glowGeo = new THREE.SphereGeometry(0.36, 12, 12);
+      // Halo Wireframe
+      const glowGeo = new THREE.SphereGeometry(0.32, 10, 10);
       const glowMat = new THREE.MeshBasicMaterial({
         color: info.hex,
         wireframe: true,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.25,
       });
       const glowMesh = new THREE.Mesh(glowGeo, glowMat);
       nodeMesh.add(glowMesh);
@@ -208,27 +208,27 @@ export function AgentForgeScene({
         mesh: nodeMesh,
         glow: glowMesh,
         baseRadius: radius,
-        speed: 0.4 + index * 0.1,
+        speed: 0.35 + index * 0.08,
         angle,
         yOffset,
       });
     });
 
-    // 4. Background Star / Particle Field
-    const particleCount = 280;
+    // 4. Subtle Micro-Particle Dust
+    const particleCount = 200;
     const particleGeo = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount * 3; i += 3) {
-      positions[i] = (Math.random() - 0.5) * 16;
-      positions[i + 1] = (Math.random() - 0.5) * 12;
-      positions[i + 2] = (Math.random() - 0.5) * 12;
+      positions[i] = (Math.random() - 0.5) * 14;
+      positions[i + 1] = (Math.random() - 0.5) * 10;
+      positions[i + 2] = (Math.random() - 0.5) * 10;
     }
     particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     const particleMat = new THREE.PointsMaterial({
-      color: 0x38bdf8,
-      size: 0.035,
+      color: 0x94a3b8,
+      size: 0.025,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.4,
     });
     const particles = new THREE.Points(particleGeo, particleMat);
     scene.add(particles);
@@ -296,45 +296,45 @@ export function AgentForgeScene({
       const elapsed = clock.getElapsedTime();
 
       // Smooth camera parallax
-      targetX = mouseX * 0.8;
-      targetY = mouseY * 0.5;
+      targetX = mouseX * 0.6;
+      targetY = mouseY * 0.35;
       camera.position.x += (targetX - camera.position.x) * 0.05;
-      camera.position.y += (1.8 + targetY - camera.position.y) * 0.05;
+      camera.position.y += (1.6 + targetY - camera.position.y) * 0.05;
       camera.lookAt(0, 0, 0);
 
-      const motionSpeed = prefersReducedMotion ? 0.1 : 1.0;
+      const motionSpeed = prefersReducedMotion ? 0.05 : 1.0;
 
       // Rotate forge core
-      coreGroup.rotation.y += delta * 0.4 * motionSpeed;
-      coreGroup.rotation.x = Math.sin(elapsed * 0.5) * 0.15;
+      coreGroup.rotation.y += delta * 0.25 * motionSpeed;
+      coreGroup.rotation.x = Math.sin(elapsed * 0.4) * 0.1;
 
       // Orbit agent satellite nodes
       agentMeshes.forEach((agent) => {
-        agent.angle += delta * agent.speed * 0.5 * motionSpeed;
+        agent.angle += delta * agent.speed * 0.4 * motionSpeed;
         const x = Math.cos(agent.angle) * agent.baseRadius;
         const z = Math.sin(agent.angle) * agent.baseRadius;
-        const y = agent.yOffset + Math.sin(elapsed * 1.5 + agent.angle) * 0.15;
+        const y = agent.yOffset + Math.sin(elapsed * 1.2 + agent.angle) * 0.12;
 
         agent.mesh.position.set(x, y, z);
-        agent.mesh.rotation.y += delta * 1.5;
-        agent.mesh.rotation.x += delta * 0.8;
+        agent.mesh.rotation.y += delta * 1.2;
+        agent.mesh.rotation.x += delta * 0.6;
 
         // Pulse scale if hovered or active
         const isTarget =
           hoveredAgent === agent.key || activeAgent === agent.key;
-        const targetScale = isTarget ? 1.4 : 1.0;
+        const targetScale = isTarget ? 1.3 : 1.0;
         agent.mesh.scale.lerp(
           new THREE.Vector3(targetScale, targetScale, targetScale),
           0.1,
         );
 
         if (agent.glow.material instanceof THREE.MeshBasicMaterial) {
-          agent.glow.material.opacity = isTarget ? 0.75 : 0.35;
+          agent.glow.material.opacity = isTarget ? 0.6 : 0.25;
         }
       });
 
       // Slowly rotate particle field
-      particles.rotation.y = elapsed * 0.02 * motionSpeed;
+      particles.rotation.y = elapsed * 0.015 * motionSpeed;
 
       renderer.render(scene, camera);
     };
@@ -361,7 +361,6 @@ export function AgentForgeScene({
       container.removeEventListener("mousemove", handlePointerHover);
       container.removeEventListener("click", handleClick);
 
-      // Dispose Three resources
       coreGeo.dispose();
       coreWireMat.dispose();
       innerGeo.dispose();
@@ -400,57 +399,51 @@ export function AgentForgeScene({
 
   return (
     <div
-      className={`relative flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-b from-surface/80 to-canvas/90 backdrop-blur-xl shadow-2xl ${className}`}
+      className={`relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#101116]/60 backdrop-blur-2xl shadow-2xl shadow-black/60 ${className}`}
     >
       {/* 3D Canvas Container */}
       <div
         ref={containerRef}
-        className="relative h-72 w-full select-none overflow-hidden sm:h-80 md:h-96"
+        className="relative h-64 w-full select-none overflow-hidden sm:h-72 md:h-80"
         role="img"
-        aria-label="Interactive 3D Multi-Agent Forge Topology"
+        aria-label="3D Multi-Agent Topology"
       >
         {!isSupported && (
-          <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted">
+          <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-neutral-500">
             3D WebGL preview not available in this environment.
           </div>
         )}
 
-        {/* Ambient Overlay Header */}
-        <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-mono text-muted backdrop-blur-md">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-          </span>
-          LangGraph Agent Topology
+        {/* Ambient Top Tag */}
+        <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/40 px-3 py-1 text-xs font-mono text-neutral-400 backdrop-blur-md">
+          <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+          Agent Topology
         </div>
 
-        {/* Interactive Tooltip in Canvas */}
-        <div className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-xl border border-white/10 bg-black/50 p-3.5 backdrop-blur-md">
+        {/* Quiet Minimalist Tooltip */}
+        <div className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-xl border border-white/[0.08] bg-black/60 p-3 backdrop-blur-xl">
           <div>
             <div className="flex items-center gap-2">
               <span
-                className="h-2.5 w-2.5 rounded-full"
+                className="h-2 w-2 rounded-full"
                 style={{ backgroundColor: displayedInfo.color }}
               />
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-xs font-medium text-white">
                 {displayedInfo.name}
               </span>
-              <span className="text-xs font-mono text-muted">
+              <span className="text-[11px] font-mono text-neutral-400">
                 {displayedInfo.role}
               </span>
             </div>
-            <p className="mt-1 text-xs text-muted leading-relaxed">
+            <p className="mt-1 text-xs text-neutral-400 leading-relaxed">
               {displayedInfo.description}
             </p>
           </div>
-          <span className="hidden text-xs font-mono text-accent sm:inline-block">
-            Hover or click nodes
-          </span>
         </div>
       </div>
 
       {/* Agent Selector Badges */}
-      <div className="grid grid-cols-2 gap-2 border-t border-border/60 p-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 border-t border-white/[0.06] p-3 sm:grid-cols-4">
         {(Object.keys(AGENT_REGISTRY) as AgentKey[]).map((key) => {
           const info = AGENT_REGISTRY[key];
           const isCurrent = (hoveredAgent || activeAgent) === key;
@@ -461,14 +454,14 @@ export function AgentForgeScene({
               onClick={() => onSelectAgent && onSelectAgent(key)}
               onMouseEnter={() => setHoveredAgent(key)}
               onMouseLeave={() => setHoveredAgent(null)}
-              className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-xs transition-all ${
+              className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-left text-xs transition-all ${
                 isCurrent
-                  ? "border-accent/60 bg-accent/10 text-foreground shadow-sm shadow-accent/20"
-                  : "border-border/60 bg-surface/40 text-muted hover:border-border hover:text-foreground"
+                  ? "border-white/30 bg-white/[0.08] text-white shadow-sm"
+                  : "border-white/[0.05] bg-white/[0.02] text-neutral-400 hover:border-white/[0.12] hover:text-white"
               }`}
             >
               <span
-                className="h-2 w-2 rounded-full"
+                className="h-1.5 w-1.5 rounded-full"
                 style={{ backgroundColor: info.color }}
               />
               <span className="font-medium truncate">{info.name.replace(" Agent", "")}</span>

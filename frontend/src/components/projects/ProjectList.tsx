@@ -11,8 +11,8 @@ interface ProjectListProps {
 export function ProjectList({ projects }: ProjectListProps) {
   if (projects.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border/80 px-4 py-8 text-center text-sm text-muted">
-        No projects yet. Create one to start a workflow run.
+      <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] px-4 py-10 text-center text-sm text-neutral-500 backdrop-blur-md">
+        No active projects found. Create one above to launch an autonomous multi-agent run.
       </div>
     );
   }
@@ -23,12 +23,14 @@ export function ProjectList({ projects }: ProjectListProps) {
         <li key={project.id}>
           <Link
             href={`/projects/${project.id}`}
-            className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-surface/50 px-4 py-3 transition hover:border-accent/50 hover:bg-white/5"
+            className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.06] bg-[#121318]/50 px-5 py-4 transition-all hover:border-white/20 hover:bg-white/[0.04] backdrop-blur-xl group shadow-sm"
           >
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">{project.name}</span>
-              <span className="mt-1 block truncate text-sm text-muted">
-                {project.description ?? "No description"}
+              <span className="block truncate text-sm font-medium text-white transition group-hover:text-white">
+                {project.name}
+              </span>
+              <span className="mt-1 block truncate text-xs text-neutral-400">
+                {project.description ?? "No description provided"}
               </span>
             </span>
             <StatusBadge tone={projectStatusTone(project.status)}>

@@ -47,11 +47,10 @@ export function HealthPanel() {
 
   return (
     <Card className="relative overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Backend</p>
-          <h2 className="mt-1 text-lg font-semibold">Service status</h2>
+          <p className="text-xs font-mono uppercase tracking-wider text-neutral-500">Backend</p>
+          <h2 className="mt-1 text-base font-semibold text-white">Service status</h2>
         </div>
         {state.status === "loading" && <StatusBadge tone="warning">Checking</StatusBadge>}
         {state.status === "success" && <StatusBadge tone="success">Online</StatusBadge>}
@@ -61,31 +60,31 @@ export function HealthPanel() {
       <div className="mt-5" aria-live="polite">
         {state.status === "loading" && (
           <div className="space-y-3">
-            <p className="text-sm text-muted">Checking backend status...</p>
-            <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
-            <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
+            <p className="text-sm text-neutral-500">Checking backend status...</p>
+            <div className="h-3 w-2/3 animate-pulse rounded bg-white/[0.04]" />
+            <div className="h-3 w-1/2 animate-pulse rounded bg-white/[0.04]" />
           </div>
         )}
 
         {state.status === "success" && (
           <div>
-            <p className="text-sm font-medium text-success">Backend online.</p>
+            <p className="text-sm font-medium text-emerald-400">Backend online.</p>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Service</dt>
-                <dd className="mt-1 font-medium">{state.data.service}</dd>
+                <dt className="text-xs uppercase tracking-wider text-neutral-500">Service</dt>
+                <dd className="mt-1 font-medium text-white">{state.data.service}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Version</dt>
-                <dd className="mt-1 font-medium">{state.data.version}</dd>
+                <dt className="text-xs uppercase tracking-wider text-neutral-500">Version</dt>
+                <dd className="mt-1 font-mono text-xs text-neutral-300">{state.data.version}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Environment</dt>
-                <dd className="mt-1 font-medium">{state.data.environment}</dd>
+                <dt className="text-xs uppercase tracking-wider text-neutral-500">Environment</dt>
+                <dd className="mt-1 font-mono text-xs text-neutral-300">{state.data.environment}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Status</dt>
-                <dd className="mt-1 font-medium">{state.data.status}</dd>
+                <dt className="text-xs uppercase tracking-wider text-neutral-500">Status</dt>
+                <dd className="mt-1 font-medium text-emerald-400">{state.data.status}</dd>
               </div>
             </dl>
           </div>
@@ -93,11 +92,11 @@ export function HealthPanel() {
 
         {state.status === "error" && (
           <div role="alert">
-            <p className="text-sm font-medium text-danger">Backend unreachable.</p>
-            <p className="mt-2 text-sm text-muted">{state.message}</p>
-            <p className="mt-3 text-xs leading-5 text-muted">
+            <p className="text-sm font-medium text-red-400">Backend unreachable.</p>
+            <p className="mt-2 text-sm text-neutral-400">{state.message}</p>
+            <p className="mt-3 text-xs leading-5 text-neutral-500">
               Start the API with{" "}
-              <code className="rounded bg-white/5 px-1.5 py-0.5 text-foreground">
+              <code className="rounded border border-white/[0.08] bg-black/40 px-1.5 py-0.5 font-mono text-neutral-300">
                 cd backend &amp;&amp; uv run uvicorn app.main:app --reload
               </code>
               .
