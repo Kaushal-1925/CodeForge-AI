@@ -1110,10 +1110,10 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
                 className="whitespace-nowrap rounded-md border border-white/[0.12] bg-[#0c0d12]/90 px-2 py-0.5 font-mono text-[10px] font-medium tracking-wide text-white shadow-xl backdrop-blur-md"
                 style={{ borderLeftColor: planet.colorHex, borderLeftWidth: "2.5px" }}
               >
-                {planet.name}
+                {planet.agentRole}
               </span>
               <span className="mt-0.5 text-[8px] font-mono text-neutral-400">
-                {planet.agentRole}
+                {planet.kind} · {planet.meanDistanceAU} AU
               </span>
             </div>
           </div>
@@ -1133,7 +1133,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
             CodeForge AI Solar System
           </h1>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-neutral-400">
-            The central intelligence is the Sun. Eight specialized agents orbit as planetary bodies from Mercury through Neptune. Click any planet to inspect its scientific and architectural dossier.
+            The central intelligence is the Sun. Eight specialized autonomous agents orbit along their respective planetary trajectories. Click any agent body to inspect its scientific and architectural dossier.
           </p>
         </div>
 
@@ -1213,7 +1213,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
                 className="h-2 w-2 rounded-full transition-transform group-hover:scale-125"
                 style={{ backgroundColor: planet.colorHex }}
               />
-              <span className="font-medium text-[11px]">{planet.name}</span>
+              <span className="font-medium text-[11px]">{planet.agentRole}</span>
               <span className="font-mono text-[9px] text-neutral-500">{planet.meanDistanceAU} AU</span>
             </button>
           ))}
@@ -1244,7 +1244,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
                     style={{ backgroundColor: selectedPlanet.colorHex }}
                   />
                   <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
-                    {selectedPlanet.astronomicalName}
+                    Orbit {selectedPlanet.order} · {selectedPlanet.meanDistanceAU} AU
                   </span>
                   <span className="rounded bg-white/[0.08] px-2 py-0.5 font-mono text-[10px] text-white">
                     {selectedPlanet.kind}
@@ -1254,7 +1254,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
                   id="planet-modal-title"
                   className="mt-2 text-2xl font-bold tracking-tight text-white"
                 >
-                  {selectedPlanet.name} — {selectedPlanet.agentRole}
+                  {selectedPlanet.agentRole}
                 </h2>
                 <p className="mt-1 text-xs text-neutral-400 font-mono">
                   {selectedPlanet.agentReportSummary}
