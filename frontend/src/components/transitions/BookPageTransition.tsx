@@ -14,14 +14,15 @@ interface BookPageTransitionProps {
  * Implements a physically modeled right-to-left flexible book-page turn
  * driven continuously by user scroll progress.
  *
- * Core physical mechanics:
+ * Features:
  * 1. Traveling cylindrical fold wave from right (100%) to left (0%).
  * 2. Front surface (Solar System) stays live and crops progressively at the curl line without GPU context loss.
  * 3. 3D arched cylinder along the fold with specular ridge sheen and trough shadows.
  * 4. Turned reverse flap showing luxury obsidian hardcover bookplate with debossed gold astrolabe seal.
- * 5. Dynamic soft cast shadow projected onto the revealed working interface underneath.
- * 6. 100% reversible in both scroll directions with smooth lerp interpolation (60 FPS).
- * 7. Seamless scroll continuation into the workspace once the turn completes (p >= 0.98).
+ * 5. Automatic fade-out of reverse flap past 80% so workspace is completely clean.
+ * 6. Always opens to Solar System cover on page load/refresh (scrollRestoration = manual).
+ * 7. Guaranteed 2-way navigation: clicks on header/buttons work at all times.
+ * 8. Window-level scroll chaining for smooth reversible scrolling in both directions.
  */
 export function BookPageTransition({
   frontPage,
@@ -35,10 +36,17 @@ export function BookPageTransition({
   const castShadowRef = useRef<HTMLDivElement | null>(null);
   const underlyingContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const isCompletedRef = useRef(false);
-  const [isInteractingWithDashboard, setIsInteractingWithDashboard] = useState(false);
+  const [currentP, setCurrentP] = useState(0);
 
   useEffect(() => {
+    // 1. Ensure page always opens to Solar System cover on refresh / first load
+    if (typeof window !== "undefined") {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
+      }
+      window.scrollTo(0, 0);
+    }
+
     const container = containerRef.current;
     const frontClip = frontClipWrapperRef.current;
     const cylinderEl = curlCylinderRef.current;
@@ -64,15 +72,13 @@ export function BookPageTransition({
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
-    // Wheel event chaining: when at top of workspace and scrolling UP, scroll window back up
-    const handleUnderlyingWheel = (e: WheelEvent) => {
-      if (underlying && underlying.scrollTop <= 0 && e.deltaY < 0) {
-        window.scrollBy({ top: e.deltaY, behavior: "auto" });
+    // Universal wheel chaining: when at top of workspace and scrolling UP, smoothly scroll window up
+    const handleGlobalWheel = (e: WheelEvent) => {
+      if (underlying && underlying.scrollTop <= 2 && e.deltaY < 0 && targetProgress > 0) {
+        window.scrollBy({ top: e.deltaY * 1.5, behavior: "auto" });
       }
     };
-    if (underlying) {
-      underlying.addEventListener("wheel", handleUnderlyingWheel, { passive: true });
-    }
+    window.addEventListener("wheel", handleGlobalWheel, { passive: true });
 
     // High-performance 60 FPS render loop outside React state
     const updateTransforms = () => {
@@ -89,7 +95,6 @@ export function BookPageTransition({
       const p = currentProgress;
 
       // 1. Traveling Fold Progress (from 100% right edge to 0% left spine)
-      // Smooth sinusoidal easing to mimic paper resistance & settling
       const easedP = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
       const foldPercent = (1 - easedP) * 100;
 
@@ -102,7 +107,7 @@ export function BookPageTransition({
       if (p <= 0.001) {
         frontClip.style.width = "100%";
         frontClip.style.visibility = "visible";
-      } else if (p >= 0.995) {
+      } else if (p >= 0.99) {
         frontClip.style.width = "0%";
         frontClip.style.visibility = "hidden";
       } else {
@@ -111,8 +116,8 @@ export function BookPageTransition({
       }
 
       // 3. 3D Curled Cylinder Spine along the active fold
-      if (p > 0.005 && p < 0.992) {
-        cylinderEl.style.opacity = "1";
+      if (p > 0.005 && p < 0.95) {
+        cylinderEl.style.opacity = `${p > 0.85 ? Math.max(0, (0.95 - p) / 0.1) : 1}`;
         cylinderEl.style.left = `${foldPercent}%`;
         const cylinderAngle = -bend * 32;
         cylinderEl.style.transform = `translateX(-50%) translateZ(${liftZ}px) rotateY(${cylinderAngle}deg) rotateZ(${cornerTilt * 0.4}deg)`;
@@ -132,11 +137,15 @@ export function BookPageTransition({
       }
 
       // 4. Turned Reverse Flap (Luxury Obsidian Hardcover Bookplate)
-      // Displays the underside of the curled sheet curling backward
-      if (p > 0.015 && p < 0.995) {
-        flapEl.style.opacity = "1";
-        // Flap width tracks the peeled paper portion
-        const flapWidth = Math.min(foldPercent, Math.max(12, (100 - foldPercent) * 0.55));
+      // Displays the underside of the curled sheet, then gracefully dissolves past 80% so workspace is clean
+      if (p > 0.015 && p < 0.92) {
+        // Flap fades out smoothly as page settles onto spine (between p = 0.75 and 0.90)
+        const flapOpacity = p < 0.75 ? 1 : Math.max(0, (0.90 - p) / 0.15);
+        flapEl.style.opacity = `${flapOpacity}`;
+        flapEl.style.visibility = flapOpacity > 0 ? "visible" : "hidden";
+
+        // Flap width tracks peeled paper portion and shrinks cleanly to 0
+        const flapWidth = Math.min(foldPercent, Math.max(0, (100 - foldPercent) * 0.45));
         flapEl.style.left = `${Math.max(0, foldPercent - flapWidth)}%`;
         flapEl.style.width = `${flapWidth}%`;
 
@@ -150,11 +159,13 @@ export function BookPageTransition({
         flapEl.style.filter = `brightness(${brightness})`;
       } else {
         flapEl.style.opacity = "0";
+        flapEl.style.visibility = "hidden";
       }
 
       // 5. Dynamic Cast Shadow on Underlying Workspace
-      if (p > 0.015 && p < 0.985) {
-        shadowEl.style.opacity = "1";
+      if (p > 0.015 && p < 0.92) {
+        const shadowOpacity = p < 0.8 ? 1 : Math.max(0, (0.92 - p) / 0.12);
+        shadowEl.style.opacity = `${shadowOpacity}`;
         shadowEl.style.left = `${foldPercent}%`;
         shadowEl.style.background = `linear-gradient(
           to right,
@@ -166,19 +177,6 @@ export function BookPageTransition({
       } else {
         shadowEl.style.opacity = "0";
       }
-
-      // 6. Interaction Governor
-      if (p >= 0.98) {
-        if (!isCompletedRef.current) {
-          isCompletedRef.current = true;
-          setIsInteractingWithDashboard(true);
-        }
-      } else {
-        if (isCompletedRef.current) {
-          isCompletedRef.current = false;
-          setIsInteractingWithDashboard(false);
-        }
-      }
     };
 
     updateTransforms();
@@ -186,9 +184,7 @@ export function BookPageTransition({
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("scroll", handleScroll);
-      if (underlying) {
-        underlying.removeEventListener("wheel", handleUnderlyingWheel);
-      }
+      window.removeEventListener("wheel", handleGlobalWheel);
     };
   }, []);
 
@@ -206,12 +202,12 @@ export function BookPageTransition({
       >
         {/* ============================================================== */}
         {/* 1. Underlying Working Interface (Present underneath page)       */}
+        {/* Always receives pointer-events so clicks are never blocked!    */}
         {/* ============================================================== */}
         <div
+          id="cf-workspace-scroll"
           ref={underlyingContainerRef}
-          className={`absolute inset-0 h-full w-full overflow-y-auto bg-[#090a0d] transition-opacity duration-300 ${
-            isInteractingWithDashboard ? "pointer-events-auto" : "pointer-events-none"
-          }`}
+          className="absolute inset-0 h-full w-full overflow-y-auto bg-[#090a0d] pointer-events-auto"
           style={{ zIndex: 1 }}
         >
           {underlyingContent}
@@ -235,7 +231,7 @@ export function BookPageTransition({
         >
           <div
             className="h-full w-screen overflow-hidden bg-[#06080d]"
-            style={{ minWidth: "100vw" }}
+            style={{ width: "100vw", minWidth: "100vw", height: "100vh" }}
           >
             {frontPage}
           </div>

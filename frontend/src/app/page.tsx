@@ -23,6 +23,10 @@ export default function HomePage() {
         top: 0,
         behavior: "smooth",
       });
+      const underlying = document.getElementById("cf-workspace-scroll");
+      if (underlying) {
+        underlying.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   };
 
@@ -32,11 +36,24 @@ export default function HomePage() {
         <SolarAgentSystem onExploreWorkspace={scrollToWorkspace} />
       }
       underlyingContent={
-        <div className="flex min-h-screen flex-col bg-[#090a0d] text-foreground">
+        <div className="flex min-h-screen flex-col bg-[#090a0d] text-foreground relative">
           {/* 1. Workspace Navigation Bar */}
           <AppHeader onBackToSolarSystem={scrollToSolarSystem} />
 
-          {/* 2. Projects & Workflows Workspace */}
+          {/* 2. Floating Return to Cover Button for instant 1-click return */}
+          <div className="fixed bottom-6 right-6 z-50">
+            <button
+              type="button"
+              onClick={scrollToSolarSystem}
+              className="flex items-center gap-2 rounded-full border border-amber-500/40 bg-[#12141c]/90 px-4 py-2.5 font-mono text-xs font-medium text-amber-300 shadow-[0_8px_24px_rgba(0,0,0,0.6)] backdrop-blur-xl transition hover:border-amber-400 hover:bg-amber-500/20 hover:text-white hover:scale-105 active:scale-95 cursor-pointer"
+              title="Flip back to Solar System Cover"
+            >
+              <span className="text-amber-400">←</span>
+              <span>☉ Solar System Cover</span>
+            </button>
+          </div>
+
+          {/* 3. Projects & Workflows Workspace */}
           <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-12 lg:px-10">
             <section className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/[0.06] pb-8">
               <div>

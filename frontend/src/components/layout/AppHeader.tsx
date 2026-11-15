@@ -43,10 +43,11 @@ export function AppHeader({ onBackToSolarSystem }: AppHeaderProps = {}) {
             <button
               type="button"
               onClick={onBackToSolarSystem}
-              className="flex items-center gap-1.5 text-xs font-mono text-neutral-400 transition hover:text-amber-400"
+              className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-mono text-amber-300 transition hover:border-amber-400 hover:bg-amber-500/20 hover:text-white cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.15)]"
+              title="Return to Solar System Cover"
             >
-              <span className="text-amber-400/80">☉</span>
-              <span>Solar System</span>
+              <span className="text-amber-400">☉</span>
+              <span>Solar System Cover</span>
             </button>
           )}
           <Link className="transition hover:text-white" href="/">
