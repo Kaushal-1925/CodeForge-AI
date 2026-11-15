@@ -9,12 +9,12 @@ import { BookPageTransition } from "@/components/transitions/BookPageTransition"
 export default function HomePage() {
   const scrollToWorkspace = () => {
     if (typeof window !== "undefined") {
-      // 0.65x viewport height triggers 100% page turn to uncover the workspace on 160vh container
       const targetY = window.innerHeight * 0.65;
       const startY = window.scrollY;
       const diff = targetY - startY;
+      if (Math.abs(diff) < 2) return;
       const startTime = performance.now();
-      const duration = 460; // Snappy 460ms cubic page turn
+      const duration = 380; // Crisp 380ms forward page turn
 
       const step = (now: number) => {
         const elapsed = now - startTime;
@@ -36,22 +36,25 @@ export default function HomePage() {
 
   const scrollToSolarSystem = () => {
     if (typeof window !== "undefined") {
-      const startY = window.scrollY;
-      const startTime = performance.now();
-      const duration = 380; // Swift 380ms return to cover
-
       const underlying = document.getElementById("cf-workspace-scroll");
       if (underlying) {
         underlying.scrollTo({ top: 0, behavior: "instant" });
       }
 
+      const startY = window.scrollY;
+      if (startY <= 0) {
+        window.scrollTo(0, 0);
+        return;
+      }
+
+      const startTime = performance.now();
+      const duration = 320; // Swift 320ms return to cover
+
       const step = (now: number) => {
         const elapsed = now - startTime;
         const progress = Math.min(1, elapsed / duration);
-        const ease =
-          progress < 0.5
-            ? 4 * progress * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        // Snappy cubic ease-out
+        const ease = 1 - Math.pow(1 - progress, 3);
         window.scrollTo(0, startY * (1 - ease));
         if (progress < 1) {
           requestAnimationFrame(step);

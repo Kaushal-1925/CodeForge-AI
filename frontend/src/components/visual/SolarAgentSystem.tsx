@@ -350,35 +350,20 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     let isWebGL = false;
     let renderer: THREE.WebGLRenderer | null = null;
     try {
-      const testRenderer = new THREE.WebGLRenderer({
-        antialias: false,
-        powerPreference: "default",
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference: "high-performance",
         failIfMajorPerformanceCaveat: false,
       });
-      const gl = testRenderer.getContext();
+      const gl = renderer.getContext();
       if (gl && !gl.isContextLost()) {
-        const testScene = new THREE.Scene();
-        const testCam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-        const light = new THREE.PointLight(0xffffff, 1, 50);
-        light.castShadow = true;
-        testScene.add(light);
-        const testMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshStandardMaterial());
-        testScene.add(testMesh);
-        testRenderer.shadowMap.enabled = true;
-        testRenderer.render(testScene, testCam);
-
-        if (!gl.isContextLost()) {
-          renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: false,
-            powerPreference: "default",
-            preserveDrawingBuffer: true,
-            failIfMajorPerformanceCaveat: false,
-          });
-          isWebGL = Boolean(renderer && !renderer.getContext().isContextLost());
-        }
+        isWebGL = true;
+      } else {
+        renderer.dispose();
+        renderer = null;
+        isWebGL = false;
       }
-      testRenderer.dispose();
     } catch {
       isWebGL = false;
       renderer = null;
@@ -395,7 +380,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       camera.position.set(0, 36, 62);
       camera.lookAt(0, 0, 0);
 
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      // Controlled DPR (max 1.5): saves >43% GPU fragment/texture work on Retina/high-DPI screens
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       renderer.setSize(width, height);
       renderer.setClearColor(0x06080d, 1);
       renderer.domElement.style.width = "100%";
@@ -723,10 +709,63 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       let lastTime = performance.now();
       const tempVec = new THREE.Vector3();
 
+      let isSystemPaused = false;
+      let isSystemTurning = false;
+      let frameCounter = 0;
+
+      // Intelligent Rendering Strategy: Pause WebGL when workspace is revealed (p >= 0.95),
+      // throttle during active curl (p > 0.02) to maximize GPU compositor smoothness.
+      const handlePageState = (e: Event) => {
+        const customEv = e as CustomEvent<{ state: string; progress: number }>;
+        if (!customEv.detail) return;
+        const state = customEv.detail.state;
+        if (state === "hidden") {
+          isSystemPaused = true;
+          isSystemTurning = false;
+        } else if (state === "turning") {
+          isSystemPaused = false;
+          isSystemTurning = true;
+          // Hide DOM labels when page is actively curling to eliminate 8 DOM mutations per frame
+          planetsList.forEach((p) => {
+            const labelEl = document.getElementById(`label-${p.data.key}`);
+            if (labelEl) {
+              labelEl.style.display = "none";
+              labelEl.style.opacity = "0";
+            }
+          });
+        } else if (state === "cover") {
+          isSystemPaused = false;
+          isSystemTurning = false;
+        }
+      };
+
+      window.addEventListener("codeforge-page-state", handlePageState);
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          isSystemPaused = true;
+        } else {
+          const isAtWorkspace = typeof window !== "undefined" && window.scrollY >= (window.innerHeight * 0.5);
+          isSystemPaused = isAtWorkspace;
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
       renderer.render(scene, camera);
 
       const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
+
+        // 1. If paused (hidden behind workspace or browser tab inactive), halt WebGL rendering completely
+        if (isSystemPaused) {
+          return;
+        }
+
+        // 2. If actively turning, throttle scene rendering to 30 FPS to yield GPU power to page compositor
+        frameCounter++;
+        if (isSystemTurning && (frameCounter % 2 !== 0)) {
+          return;
+        }
 
         const now = performance.now();
         const delta = Math.min((now - lastTime) / 1000, 0.1);
@@ -770,27 +809,30 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           }
         });
 
-        planetsList.forEach((p) => {
-          const labelEl = document.getElementById(`label-${p.data.key}`);
-          if (!labelEl) return;
+        // 3. Only project & update DOM labels when on the flat cover (not during 3D page turn)
+        if (!isSystemTurning) {
+          planetsList.forEach((p) => {
+            const labelEl = document.getElementById(`label-${p.data.key}`);
+            if (!labelEl) return;
 
-          p.mesh.getWorldPosition(tempVec);
-          tempVec.y -= p.data.displayRadius * 1.35;
-          tempVec.project(camera);
+            p.mesh.getWorldPosition(tempVec);
+            tempVec.y -= p.data.displayRadius * 1.35;
+            tempVec.project(camera);
 
-          const inFront = tempVec.z < 1.0;
-          const screenX = (tempVec.x * 0.5 + 0.5) * width;
-          const screenY = (-tempVec.y * 0.5 + 0.5) * height;
+            const inFront = tempVec.z < 1.0;
+            const screenX = (tempVec.x * 0.5 + 0.5) * width;
+            const screenY = (-tempVec.y * 0.5 + 0.5) * height;
 
-          if (inFront && screenX > -80 && screenX < width + 80 && screenY > -50 && screenY < height + 50) {
-            labelEl.style.transform = `translate3d(${screenX}px, ${screenY}px, 0)`;
-            labelEl.style.opacity = "1";
-            labelEl.style.display = "block";
-          } else {
-            labelEl.style.opacity = "0";
-            labelEl.style.display = "none";
-          }
-        });
+            if (inFront && screenX > -80 && screenX < width + 80 && screenY > -50 && screenY < height + 50) {
+              labelEl.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0)`;
+              labelEl.style.opacity = "1";
+              labelEl.style.display = "block";
+            } else {
+              labelEl.style.opacity = "0";
+              labelEl.style.display = "none";
+            }
+          });
+        }
 
         stars.rotation.y = elapsed * 0.003;
         renderer!.render(scene, camera);
@@ -812,6 +854,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       return () => {
         cancelAnimationFrame(animationFrameId);
         window.removeEventListener("resize", handleResize);
+        window.removeEventListener("codeforge-page-state", handlePageState);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
         renderer!.domElement.removeEventListener("pointerdown", handlePointerDown);
         renderer!.domElement.removeEventListener("pointerup", handlePointerUp);
         controls.dispose();
@@ -877,6 +921,44 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
     let animationFrameId: number;
     let lastTime = performance.now();
+    let is2DPaused = false;
+    let is2DTurning = false;
+    let frameCounter2D = 0;
+
+    const handlePageState2D = (e: Event) => {
+      const customEv = e as CustomEvent<{ state: string; progress: number }>;
+      if (!customEv.detail) return;
+      const state = customEv.detail.state;
+      if (state === "hidden") {
+        is2DPaused = true;
+        is2DTurning = false;
+      } else if (state === "turning") {
+        is2DPaused = false;
+        is2DTurning = true;
+        PLANETS.forEach((planet) => {
+          const labelEl = document.getElementById(`label-${planet.key}`);
+          if (labelEl) {
+            labelEl.style.display = "none";
+            labelEl.style.opacity = "0";
+          }
+        });
+      } else if (state === "cover") {
+        is2DPaused = false;
+        is2DTurning = false;
+      }
+    };
+
+    window.addEventListener("codeforge-page-state", handlePageState2D);
+
+    const handleVisibilityChange2D = () => {
+      if (document.hidden) {
+        is2DPaused = true;
+      } else {
+        const isAtWorkspace = typeof window !== "undefined" && window.scrollY >= (window.innerHeight * 0.5);
+        is2DPaused = isAtWorkspace;
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange2D);
 
     // Click handler for 2D Canvas
     const handleCanvasClick = (e: MouseEvent) => {
@@ -906,6 +988,15 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
     const animate2D = () => {
       animationFrameId = requestAnimationFrame(animate2D);
+
+      if (is2DPaused) {
+        return;
+      }
+
+      frameCounter2D++;
+      if (is2DTurning && (frameCounter2D % 2 !== 0)) {
+        return;
+      }
 
       const now = performance.now();
       const delta = Math.min((now - lastTime) / 1000, 0.1);
@@ -1055,12 +1146,14 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           ctx.restore();
         }
 
-        // Update 2D Floating Label
-        const labelEl = document.getElementById(`label-${planet.key}`);
-        if (labelEl) {
-          labelEl.style.transform = `translate3d(${px}px, ${py + pr + 12}px, 0)`;
-          labelEl.style.opacity = "1";
-          labelEl.style.display = "block";
+        // Update 2D Floating Label (only when on flat cover)
+        if (!is2DTurning) {
+          const labelEl = document.getElementById(`label-${planet.key}`);
+          if (labelEl) {
+            labelEl.style.transform = `translate3d(${px.toFixed(1)}px, ${(py + pr + 12).toFixed(1)}px, 0)`;
+            labelEl.style.opacity = "1";
+            labelEl.style.display = "block";
+          }
         }
       });
     };
@@ -1080,6 +1173,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", handleResize2D);
+      window.removeEventListener("codeforge-page-state", handlePageState2D);
+      document.removeEventListener("visibilitychange", handleVisibilityChange2D);
       canvas.removeEventListener("click", handleCanvasClick);
       if (container.contains(canvas)) {
         container.removeChild(canvas);

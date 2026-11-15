@@ -11,13 +11,13 @@ interface BookPageTransitionProps {
 /**
  * Super-Smooth 60-120 FPS Realistic 3D Book Page-Flip Transition
  *
- * Performance optimizations:
+ * Performance architecture:
  * 1. 100% GPU Compositor transforms (translate3d, rotateY, rotateX, rotateZ).
- * 2. Snappy 160vh scroll container (400-500px scrollable distance for rapid 1-flick page turn).
- * 3. High-responsiveness lerp filter (0.35 tracking factor eliminates all latency/sluggishness).
- * 4. Dedicated 450ms cubic-bezier programmatic scroll for instantaneous button navigation.
- * 5. Direct window-level scroll-up chaining so returning to cover from top of workspace is effortless.
- * 6. Zero layout reflows (no width, height, top, or left mutations).
+ * 2. Instantaneous scroll synchronization: zero lerp latency, immediate responsiveness, perfectly reversible.
+ * 3. Zero layout reflows (geometry and container dimensions cached on resize, no getBoundingClientRect in scroll).
+ * 4. Zero CSS gradient re-parsing (fixed gradient textures moved via hardware-accelerated transform & opacity).
+ * 5. Intelligent state dispatch to pause underlying WebGL/Three.js render loop when hidden (progress >= 0.95).
+ * 6. Native wheel chaining and programmatic cubic-bezier page turn for effortless bi-directional navigation.
  */
 export function BookPageTransition({
   frontPage,
@@ -31,7 +31,7 @@ export function BookPageTransition({
   const underlyingContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    // Always start at top on page load / refresh
+    // Synchronously enforce top scroll on page load / refresh
     if (typeof window !== "undefined") {
       if ("scrollRestoration" in window.history) {
         window.history.scrollRestoration = "manual";
@@ -48,25 +48,36 @@ export function BookPageTransition({
     if (!container || !pageSheet || !sheen || !shadow) return;
 
     let targetProgress = 0;
-    let currentProgress = 0;
+    let currentProgress = -1; // Force initial render
     let animationFrameId: number;
+    let containerTop = 0;
+    let maxScroll = 1;
+    let lastDispatchedState = "";
 
+    // Cache container layout measurements to avoid forced synchronous layouts in scroll handler
+    const updateMeasurements = () => {
+      if (!container) return;
+      containerTop = container.offsetTop;
+      maxScroll = Math.max(1, container.offsetHeight - window.innerHeight);
+    };
+
+    updateMeasurements();
+    window.addEventListener("resize", updateMeasurements, { passive: true });
+
+    // High-frequency lightweight scroll listener (0 reflows, single arithmetic division)
     const handleScroll = () => {
-      const rect = container.getBoundingClientRect();
-      const scrollableDist = rect.height - window.innerHeight;
-      if (scrollableDist <= 0) return;
-
-      const raw = -rect.top / scrollableDist;
-      targetProgress = Math.max(0, Math.min(1, raw));
+      const scrollY = window.scrollY;
+      const raw = (scrollY - containerTop) / maxScroll;
+      targetProgress = raw <= 0 ? 0 : raw >= 1 ? 1 : raw;
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
-    // Wheel-up chaining: when at top of workspace and scrolling UP, roll the book cover back swiftly
+    // Effortless wheel-up chaining: when at top of workspace and user scrolls UP, immediately roll cover back
     const handleGlobalWheel = (e: WheelEvent) => {
-      if (underlying && underlying.scrollTop <= 2 && e.deltaY < 0 && targetProgress > 0) {
-        window.scrollBy({ top: e.deltaY * 1.8, behavior: "auto" });
+      if (underlying && underlying.scrollTop <= 2 && e.deltaY < 0 && window.scrollY > 0) {
+        window.scrollBy({ top: e.deltaY * 1.5, behavior: "auto" });
       }
     };
     window.addEventListener("wheel", handleGlobalWheel, { passive: true });
@@ -75,79 +86,75 @@ export function BookPageTransition({
     const updateTransforms = () => {
       animationFrameId = requestAnimationFrame(updateTransforms);
 
-      // Snappy lerp (0.35 factor ensures immediate, crisp response without sluggish latency)
-      const diff = targetProgress - currentProgress;
-      if (Math.abs(diff) > 0.0003) {
-        currentProgress += diff * 0.35;
-      } else {
-        currentProgress = targetProgress;
-      }
+      // Instantaneous scroll tracking: maps directly to scroll position on each RAF tick
+      // Eliminates sluggish lag and rubber-banding, while retaining full 60-120 FPS fluidity
+      const p = targetProgress;
 
-      const p = currentProgress;
+      // Only update DOM styles if progress changed or on initial mount
+      if (Math.abs(p - currentProgress) > 0.0001) {
+        currentProgress = p;
 
-      // 1. GPU Composited 3D Coordinates
-      const viewWidth = window.innerWidth;
-      const tx = p * viewWidth;
+        // 1. GPU Composited 3D Coordinates & Curvature
+        const viewWidth = window.innerWidth;
+        const tx = p * viewWidth;
 
-      // Organic paper bend peaks at mid-turn (p = 0.5)
-      const bend = Math.sin(p * Math.PI);
-      const tz = bend * 165; // Upward paper arch in +Z (px)
-      const rotX = bend * -4.8; // Natural diagonal corner pull (deg)
-      const rotZ = bend * 3.6; // Torsional paper twist (deg)
+        // Organic paper bend peaks at mid-turn (p = 0.5)
+        const bend = Math.sin(p * Math.PI);
+        const tz = bend * 165; // Upward paper arch in +Z (px)
+        const rotX = bend * -4.8; // Natural diagonal corner pull (deg)
+        const rotZ = bend * 3.6; // Torsional paper twist (deg)
 
-      // Curvature angle keeps sheet visible throughout mid-turn
-      const rotY = -p * 180 + bend * 22;
+        // Realistic book curvature: rotates around left vertical spine
+        const rotY = -p * 180 + bend * 22;
 
-      // Hardware-accelerated 3D transform on turning sheet
-      pageSheet.style.transform = `translate3d(${tx}px, 0, ${tz}px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg)`;
+        // Hardware-accelerated 3D transform on turning sheet
+        pageSheet.style.transform = `translate3d(${tx.toFixed(1)}px, 0, ${tz.toFixed(1)}px) rotateY(${rotY.toFixed(2)}deg) rotateX(${rotX.toFixed(2)}deg) rotateZ(${rotZ.toFixed(2)}deg)`;
 
-      // 2. Dynamic Specular Sheen Wave along Curvature
-      if (p > 0.01 && p < 0.95) {
-        sheen.style.opacity = `${bend * 0.65}`;
-        const sheenX = (1 - p) * 100;
-        sheen.style.background = `linear-gradient(
-          to right,
-          transparent ${Math.max(0, sheenX - 30)}%,
-          rgba(255, 255, 255, 0.3) ${sheenX}%,
-          rgba(0, 0, 0, 0.4) ${Math.min(100, sheenX + 15)}%,
-          transparent ${Math.min(100, sheenX + 35)}%
-        )`;
-      } else {
-        sheen.style.opacity = "0";
-      }
+        // 2. Specular Ridge Curvature Sheen - 100% GPU Composited (transform + opacity only)
+        if (p > 0.01 && p < 0.95) {
+          const sheenOpacity = bend * 0.7;
+          sheen.style.opacity = sheenOpacity.toFixed(3);
+          const sheenX = ((1 - p) * 100 - 50).toFixed(1);
+          sheen.style.transform = `translate3d(${sheenX}%, 0, 0)`;
+        } else {
+          sheen.style.opacity = "0";
+        }
 
-      // 3. Dynamic Soft Cast Shadow on Workspace
-      if (p > 0.02 && p < 0.96) {
-        shadow.style.opacity = `${bend * 0.7}`;
-        const shadowX = p * 100;
-        shadow.style.background = `linear-gradient(
-          to right,
-          rgba(0, 0, 0, 0.75) 0%,
-          rgba(0, 0, 0, 0.35) ${Math.max(0, shadowX - 15)}%,
-          rgba(0, 0, 0, 0.1) ${shadowX}%,
-          transparent ${Math.min(100, shadowX + 25)}%
-        )`;
-      } else {
-        shadow.style.opacity = "0";
-      }
+        // 3. Dynamic Soft Cast Shadow on Workspace - 100% GPU Composited
+        if (p > 0.02 && p < 0.96) {
+          const shadowOpacity = bend * 0.75;
+          shadow.style.opacity = shadowOpacity.toFixed(3);
+          const shadowX = ((-1 + p) * 50).toFixed(1);
+          shadow.style.transform = `translate3d(${shadowX}%, 0, 0)`;
+        } else {
+          shadow.style.opacity = "0";
+        }
 
-      // 4. Settling onto Left Spine: Smoothly dissolve as turn completes
-      if (p >= 0.92) {
-        const fade = Math.max(0, (1 - p) / 0.08);
-        pageSheet.style.opacity = `${fade}`;
-        pageSheet.style.visibility = p >= 0.97 ? "hidden" : "visible";
-      } else {
-        pageSheet.style.opacity = "1";
-        pageSheet.style.visibility = "visible";
-      }
+        // 4. Settling onto Left Spine: Smoothly dissolve as turn completes
+        if (p >= 0.93) {
+          const fade = Math.max(0, (1 - p) / 0.07);
+          pageSheet.style.opacity = fade.toFixed(3);
+          pageSheet.style.visibility = p >= 0.98 ? "hidden" : "visible";
+        } else {
+          pageSheet.style.opacity = "1";
+          pageSheet.style.visibility = "visible";
+        }
 
-      // 5. Pointer-Events Management:
-      // When flat on cover (p <= 0.02), planets are interactive.
-      // The moment turn begins (p > 0.02), disable pointer events on turning sheet so it NEVER blocks workspace clicks!
-      if (p <= 0.02) {
-        pageSheet.style.pointerEvents = "auto";
-      } else {
-        pageSheet.style.pointerEvents = "none";
+        // 5. Pointer-Events Management:
+        // Flat on cover (p <= 0.02): planets fully interactive.
+        // During/after turn (p > 0.02): disable pointer events so turning sheet never blocks clicks!
+        pageSheet.style.pointerEvents = p <= 0.02 ? "auto" : "none";
+
+        // 6. Intelligent State Dispatch to pause Three.js WebGL when hidden
+        const currentState = p >= 0.95 ? "hidden" : p <= 0.02 ? "cover" : "turning";
+        if (currentState !== lastDispatchedState) {
+          lastDispatchedState = currentState;
+          window.dispatchEvent(
+            new CustomEvent("codeforge-page-state", {
+              detail: { state: currentState, progress: p },
+            })
+          );
+        }
       }
     };
 
@@ -155,6 +162,7 @@ export function BookPageTransition({
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", updateMeasurements);
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("wheel", handleGlobalWheel);
     };
@@ -186,11 +194,16 @@ export function BookPageTransition({
         >
           {underlyingContent}
 
-          {/* Dynamic Cast Shadow sweeping over workspace */}
+          {/* Dynamic Cast Shadow sweeping over workspace (100% GPU Composited) */}
           <div
             ref={castShadowRef}
-            className="pointer-events-none absolute inset-0 transition-opacity duration-75"
-            style={{ zIndex: 20, opacity: 0 }}
+            className="pointer-events-none absolute inset-0 will-change-transform"
+            style={{
+              zIndex: 20,
+              opacity: 0,
+              background:
+                "linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%)",
+            }}
           />
         </div>
 
@@ -219,11 +232,15 @@ export function BookPageTransition({
           >
             {frontPage}
 
-            {/* Specular Ridge Curvature Sheen */}
+            {/* Specular Ridge Curvature Sheen (100% GPU Composited) */}
             <div
               ref={sheenRef}
-              className="pointer-events-none absolute inset-0 transition-opacity duration-75"
-              style={{ opacity: 0 }}
+              className="pointer-events-none absolute inset-0 will-change-transform"
+              style={{
+                opacity: 0,
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, rgba(0, 0, 0, 0.45) 75%, transparent 100%)",
+              }}
             />
 
             {/* Fine Right Paper Edge Thickness / Bevel */}
