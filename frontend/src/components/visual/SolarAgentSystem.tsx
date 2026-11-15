@@ -344,10 +344,12 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     const labelsContainer = labelsContainerRef.current;
     if (!container || !labelsContainer) return;
 
-    // WebGL support test
+    // WebGL support test: check WebGL2, WebGL1, or experimental
     const testCanvas = document.createElement("canvas");
     const gl =
-      testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
+      testCanvas.getContext("webgl2") ||
+      testCanvas.getContext("webgl") ||
+      testCanvas.getContext("experimental-webgl");
     if (!gl) {
       setIsSupported(false);
       return;
@@ -364,13 +366,21 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     camera.position.set(0, 36, 62);
     camera.lookAt(0, 0, 0);
 
-    // 2. High-Performance WebGL Renderer
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: false,
-      powerPreference: "high-performance",
-      preserveDrawingBuffer: true,
-    });
+    // 2. High-Performance WebGL Renderer (support default and fallback GPU adapters)
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference: "default",
+        preserveDrawingBuffer: true,
+        failIfMajorPerformanceCaveat: false,
+      });
+    } catch (err) {
+      console.warn("WebGL renderer creation failed:", err);
+      setIsSupported(false);
+      return;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.setClearColor(0x06080d, 1);
@@ -724,7 +734,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
     // 10. Animation Loop
     let animationFrameId: number;
-    const clock = new THREE.Clock();
+    let lastTime = performance.now();
     const tempVec = new THREE.Vector3();
 
     // Initial synchronous render so canvas is never blank before first RAF
@@ -733,8 +743,10 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      const delta = clock.getDelta();
-      const elapsed = clock.getElapsedTime();
+      const now = performance.now();
+      const delta = Math.min((now - lastTime) / 1000, 0.1);
+      const elapsed = now / 1000;
+      lastTime = now;
 
       controls.update();
 
@@ -881,8 +893,28 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         aria-label="Scientific 3D Solar System of CodeForge AI Agents"
       >
         {!isSupported && (
-          <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-neutral-500">
-            3D WebGL preview not available in this environment.
+          <div className="flex h-full w-full flex-col items-center justify-center p-6 text-center">
+            <div className="max-w-md rounded-2xl border border-white/[0.1] bg-[#0d0f17]/90 p-8 backdrop-blur-2xl shadow-2xl">
+              <span className="text-3xl">🪐</span>
+              <h3 className="mt-3 text-lg font-semibold text-white">WebGL 3D Acceleration Required</h3>
+              <p className="mt-2 text-xs leading-relaxed text-neutral-400">
+                Your browser or system currently has hardware graphics acceleration disabled. To view the realistic 3D Solar System:
+              </p>
+              <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/40 p-3 text-left font-mono text-[11px] text-neutral-300">
+                1. Open <span className="text-amber-400">chrome://settings/system</span> or <span className="text-amber-400">edge://settings/system</span><br />
+                2. Turn on <span className="text-white font-semibold">&quot;Use graphics acceleration when available&quot;</span><br />
+                3. Relaunch your browser
+              </div>
+              {onExploreWorkspace && (
+                <button
+                  type="button"
+                  onClick={onExploreWorkspace}
+                  className="mt-5 w-full rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-neutral-200"
+                >
+                  Continue to Projects Workspace ↓
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
