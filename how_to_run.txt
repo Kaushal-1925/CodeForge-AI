@@ -1,0 +1,1 @@
+powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
