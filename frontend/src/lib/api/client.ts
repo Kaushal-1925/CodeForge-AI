@@ -47,15 +47,30 @@ async function readErrorDetail(response: Response): Promise<string | undefined> 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const hasBody = options.body !== undefined;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      Accept: "application/json",
-      ...(hasBody ? { "Content-Type": "application/json" } : {}),
-    },
-    body: hasBody ? JSON.stringify(options.body) : undefined,
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers: {
+        Accept: "application/json",
+        ...(hasBody ? { "Content-Type": "application/json" } : {}),
+      },
+      body: hasBody ? JSON.stringify(options.body) : undefined,
+      cache: "no-store",
+    });
+  } catch (err: unknown) {
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    if (
+      rawMsg.includes("Failed to fetch") ||
+      rawMsg.includes("NetworkError") ||
+      rawMsg.includes("ECONNREFUSED")
+    ) {
+      throw new ApiError(
+        "Backend server is offline or unreachable (Failed to fetch). Please ensure the backend server is running on port 8000.",
+      );
+    }
+    throw new ApiError(rawMsg);
+  }
 
   if (!response.ok) {
     const detail = await readErrorDetail(response);

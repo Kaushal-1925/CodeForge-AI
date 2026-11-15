@@ -1,3 +1,4 @@
+import re
 from typing import Final
 
 FORBIDDEN_TASK_PATTERNS: Final[dict[str, str]] = {
@@ -17,6 +18,34 @@ FORBIDDEN_TASK_PATTERNS: Final[dict[str, str]] = {
 }
 
 
+def _pattern_is_affirmatively_used(text: str, pattern: str) -> bool:
+    for line in text.splitlines():
+        # Remove markdown formatting characters
+        line_clean = re.sub(r"[`\"'*]", "", line.strip().lower())
+        if not line_clean or pattern not in line_clean:
+            continue
+
+        # Strip explicit negations including lists/conjunctions
+        stripped_line = re.sub(
+            rf"\b(?:no|not|without|avoid|avoiding|never|do\s+not\s+(?:use|create|introduce))\s+(?:new\s+)?(?:[\w\.\/\-]+\s+(?:or|and|,)\s+)*{re.escape(pattern)}\b",
+            "",
+            line_clean,
+            flags=re.IGNORECASE,
+        )
+        # Strip parenthetical negations
+        stripped_line = re.sub(
+            rf"\((?:no|not|without|avoid)\s+(?:new\s+)?(?:[\w\.\/\-]+\s+(?:or|and|,)\s+)*{re.escape(pattern)}\)",
+            "",
+            stripped_line,
+            flags=re.IGNORECASE,
+        )
+
+        if pattern in stripped_line:
+            return True
+
+    return False
+
+
 def validate_tasks(tasks: list[str]) -> list[str]:
     errors: list[str] = []
 
@@ -29,10 +58,9 @@ def validate_tasks(tasks: list[str]) -> list[str]:
             errors.append(f"Task {index} is empty.")
             continue
 
-        task_lower = task.lower()
-
         for pattern, message in FORBIDDEN_TASK_PATTERNS.items():
-            if pattern in task_lower:
+            if _pattern_is_affirmatively_used(task, pattern):
                 errors.append(f"Task {index}: {message}")
 
     return errors
+

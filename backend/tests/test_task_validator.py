@@ -48,3 +48,13 @@ def test_new_database_infrastructure_fails():
     assert any("app/db/" in error for error in errors)
 
     assert any("declarative_base()" in error for error in errors)
+
+
+def test_negated_forbidden_task_passes():
+    tasks = [
+        "Implement pytest unit tests (do not use SQLite, use PostgreSQL test db).",
+        "Configure psycopg connection (not asyncpg, no new database.py).",
+    ]
+
+    assert validate_tasks(tasks) == []
+
