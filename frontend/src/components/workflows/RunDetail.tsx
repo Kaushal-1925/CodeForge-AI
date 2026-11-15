@@ -36,6 +36,13 @@ type ArtifactsState =
   | { status: "success"; files: ArtifactFile[] }
   | { status: "error"; message: string };
 
+const AGENT_PIPELINE = [
+  { key: "architect", name: "Architect", color: "#00e5ff" },
+  { key: "tech_lead", name: "Tech Lead", color: "#10b981" },
+  { key: "developer", name: "Developer", color: "#a855f7" },
+  { key: "tester", name: "Tester", color: "#f59e0b" },
+];
+
 export function RunDetail({ projectId, runId }: RunDetailProps) {
   const [state, setState] = useState<RunState>({ status: "loading" });
   const [artifacts, setArtifacts] = useState<ArtifactsState>({ status: "idle" });
@@ -172,7 +179,7 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border/70 pb-6">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Workflow run</p>
-          <h1 className="mt-2 max-w-3xl text-2xl font-semibold leading-tight tracking-tight">
+          <h1 className="mt-2 max-w-3xl text-2xl font-semibold leading-tight tracking-tight text-foreground">
             {currentRun.user_request}
           </h1>
         </div>
@@ -187,6 +194,54 @@ export function RunDetail({ projectId, runId }: RunDetailProps) {
           </StatusBadge>
         </div>
       </header>
+
+      {/* Visual Multi-Agent Pipeline Graph */}
+      <section className="rounded-2xl border border-border/80 bg-surface/40 p-4 backdrop-blur-md">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Multi-Agent Pipeline</p>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {AGENT_PIPELINE.map((stage, idx) => {
+            const isActive =
+              currentRun.current_agent &&
+              currentRun.current_agent.toLowerCase().includes(stage.key);
+            const isFinished = completed;
+
+            return (
+              <div
+                key={stage.key}
+                className={`relative flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                  isActive
+                    ? "border-accent bg-accent/15 shadow-md shadow-accent/20"
+                    : isFinished
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-muted"
+                    : "border-border/60 bg-canvas/40 text-muted"
+                }`}
+              >
+                <div
+                  className="grid h-7 w-7 place-items-center rounded-lg font-mono text-xs font-semibold"
+                  style={{
+                    backgroundColor: isActive ? stage.color : "rgba(255,255,255,0.05)",
+                    color: isActive ? "#000" : stage.color,
+                  }}
+                >
+                  {idx + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-foreground truncate">{stage.name}</p>
+                  <p className="text-[10px] text-muted truncate">
+                    {isActive ? "Active Agent" : isFinished ? "Completed" : "Standby"}
+                  </p>
+                </div>
+                {isActive && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card>

@@ -6,6 +6,24 @@ import { Button } from "@/components/ui/Button";
 import { createProject } from "@/lib/api/client";
 import type { Project } from "@/lib/api/types";
 
+const STARTER_TEMPLATES = [
+  {
+    label: "Expense Tracker CLI",
+    name: "Expense Tracker CLI",
+    desc: "Lightweight command-line expense logger with category totals and CSV export.",
+  },
+  {
+    label: "URL Shortener API",
+    name: "URL Shortener Service",
+    desc: "FastAPI service with 6-character shortlinks, click counts, and redirect routes.",
+  },
+  {
+    label: "Markdown Parser",
+    name: "Markdown Task Extractor",
+    desc: "Parser that extracts checklist items, priority tags, and due dates from markdown notes.",
+  },
+];
+
 interface CreateProjectFormProps {
   onCreated: (project: Project) => void;
 }
@@ -15,6 +33,11 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function applyTemplate(tpl: (typeof STARTER_TEMPLATES)[0]) {
+    setName(tpl.name);
+    setDescription(tpl.desc);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,6 +69,26 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
+      {/* Quick Template Selector */}
+      <div>
+        <span className="text-xs font-medium uppercase tracking-wide text-muted">
+          Quick Starters
+        </span>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {STARTER_TEMPLATES.map((tpl) => (
+            <button
+              key={tpl.label}
+              type="button"
+              onClick={() => applyTemplate(tpl)}
+              disabled={submitting}
+              className="rounded-lg border border-border/70 bg-surface/50 px-2.5 py-1 text-xs text-muted transition hover:border-accent/60 hover:bg-accent/10 hover:text-foreground"
+            >
+              + {tpl.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div>
         <label className="text-xs font-medium uppercase tracking-wide text-muted" htmlFor="name">
           Project name
