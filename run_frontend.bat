@@ -14,9 +14,9 @@ if not exist ".env" (
 
 echo [2/4] Launching FastAPI Backend (Port 8000)...
 if exist "%~dp0backend\.venv\Scripts\uvicorn.exe" (
-    start "CodeForge AI - Backend (Port 8000)" /D "%~dp0backend" cmd /k "set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db&& "%~dp0backend\.venv\Scripts\uvicorn.exe" app.main:app --reload --host 127.0.0.1 --port 8000"
+    start "CodeForge AI - Backend (Port 8000)" /D "%~dp0backend" cmd /k "set PYTHONPATH=.&& set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db&& "%~dp0backend\.venv\Scripts\uvicorn.exe" app.main:app --reload --host 127.0.0.1 --port 8000"
 ) else (
-    start "CodeForge AI - Backend (Port 8000)" /D "%~dp0backend" cmd /k "set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db&& uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+    start "CodeForge AI - Backend (Port 8000)" /D "%~dp0backend" cmd /k "set PYTHONPATH=.&& set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db&& uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 )
 
 echo [3/4] Launching Next.js Frontend Dashboard (Port 3000)...
