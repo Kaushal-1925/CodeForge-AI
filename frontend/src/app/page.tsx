@@ -9,24 +9,57 @@ import { BookPageTransition } from "@/components/transitions/BookPageTransition"
 export default function HomePage() {
   const scrollToWorkspace = () => {
     if (typeof window !== "undefined") {
-      // 1.45x viewport height triggers 100% page turn to uncover the workspace
-      window.scrollTo({
-        top: window.innerHeight * 1.45,
-        behavior: "smooth",
-      });
+      // 0.65x viewport height triggers 100% page turn to uncover the workspace on 160vh container
+      const targetY = window.innerHeight * 0.65;
+      const startY = window.scrollY;
+      const diff = targetY - startY;
+      const startTime = performance.now();
+      const duration = 460; // Snappy 460ms cubic page turn
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const ease =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        window.scrollTo(0, startY + diff * ease);
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          window.scrollTo(0, targetY);
+        }
+      };
+      requestAnimationFrame(step);
     }
   };
 
   const scrollToSolarSystem = () => {
     if (typeof window !== "undefined") {
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
+      const startY = window.scrollY;
+      const startTime = performance.now();
+      const duration = 380; // Swift 380ms return to cover
+
       const underlying = document.getElementById("cf-workspace-scroll");
       if (underlying) {
-        underlying.scrollTo({ top: 0, behavior: "smooth" });
+        underlying.scrollTo({ top: 0, behavior: "instant" });
       }
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const ease =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        window.scrollTo(0, startY * (1 - ease));
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          window.scrollTo(0, 0);
+        }
+      };
+      requestAnimationFrame(step);
     }
   };
 

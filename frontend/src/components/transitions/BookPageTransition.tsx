@@ -9,17 +9,15 @@ interface BookPageTransitionProps {
 }
 
 /**
- * Ultra-Smooth 60-120 FPS 3D Book Page-Flip Transition Component
+ * Super-Smooth 60-120 FPS Realistic 3D Book Page-Flip Transition
  *
- * Engineered with 100% GPU Compositor Transforms:
- * - ZERO layout reflows (no width, height, top, or left animations).
- * - Single physical sheet turning around its spine with 3D perspective.
- * - Front face: Live interactive Solar System (backfaceVisibility: hidden).
- * - Reverse face: Luxury obsidian bookplate with debossed gold astrolabe seal (rotateY: 180deg).
- * - Cylindrical arching in +Z space, diagonal corner pull, and torsional roll.
- * - Moving specular ridge sheen and dynamic soft cast shadow on the workspace.
- * - Always opens to Solar System cover on refresh / first load (history.scrollRestoration = manual).
- * - Full bi-directional navigation (smooth scroll to top & wheel-up chaining).
+ * Performance optimizations:
+ * 1. 100% GPU Compositor transforms (translate3d, rotateY, rotateX, rotateZ).
+ * 2. Snappy 160vh scroll container (400-500px scrollable distance for rapid 1-flick page turn).
+ * 3. High-responsiveness lerp filter (0.35 tracking factor eliminates all latency/sluggishness).
+ * 4. Dedicated 450ms cubic-bezier programmatic scroll for instantaneous button navigation.
+ * 5. Direct window-level scroll-up chaining so returning to cover from top of workspace is effortless.
+ * 6. Zero layout reflows (no width, height, top, or left mutations).
  */
 export function BookPageTransition({
   frontPage,
@@ -33,7 +31,7 @@ export function BookPageTransition({
   const underlyingContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    // 1. Guarantee page always starts at top on initial load & refresh
+    // Always start at top on page load / refresh
     if (typeof window !== "undefined") {
       if ("scrollRestoration" in window.history) {
         window.history.scrollRestoration = "manual";
@@ -65,81 +63,91 @@ export function BookPageTransition({
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
-    // Wheel-up chaining: when at top of workspace and scrolling UP, roll the book cover closed
+    // Wheel-up chaining: when at top of workspace and scrolling UP, roll the book cover back swiftly
     const handleGlobalWheel = (e: WheelEvent) => {
       if (underlying && underlying.scrollTop <= 2 && e.deltaY < 0 && targetProgress > 0) {
-        window.scrollBy({ top: e.deltaY * 1.5, behavior: "auto" });
+        window.scrollBy({ top: e.deltaY * 1.8, behavior: "auto" });
       }
     };
     window.addEventListener("wheel", handleGlobalWheel, { passive: true });
 
-    // 60-120 FPS GPU Render Loop (Zero DOM layout reflows)
+    // 60-120 FPS GPU Render Loop
     const updateTransforms = () => {
       animationFrameId = requestAnimationFrame(updateTransforms);
 
-      // Silky smooth momentum lerp
+      // Snappy lerp (0.35 factor ensures immediate, crisp response without sluggish latency)
       const diff = targetProgress - currentProgress;
-      if (Math.abs(diff) > 0.0002) {
-        currentProgress += diff * 0.18;
+      if (Math.abs(diff) > 0.0003) {
+        currentProgress += diff * 0.35;
       } else {
         currentProgress = targetProgress;
       }
 
       const p = currentProgress;
 
-      // Parabolic 3D bend peaks at mid-turn (p = 0.5)
-      const bend = Math.sin(p * Math.PI);
-      const tz = bend * 165; // Upward paper arch in +Z (px)
-      const rotX = bend * -5.0; // Natural diagonal corner pull (deg)
-      const rotZ = bend * 3.8; // Torsional paper twist (deg)
-
-      // 1. GPU Composited Physics Coordinates (Non-linear curvature keeps sheet visible mid-turn)
+      // 1. GPU Composited 3D Coordinates
       const viewWidth = window.innerWidth;
       const tx = p * viewWidth;
+
+      // Organic paper bend peaks at mid-turn (p = 0.5)
+      const bend = Math.sin(p * Math.PI);
+      const tz = bend * 165; // Upward paper arch in +Z (px)
+      const rotX = bend * -4.8; // Natural diagonal corner pull (deg)
+      const rotZ = bend * 3.6; // Torsional paper twist (deg)
+
+      // Curvature angle keeps sheet visible throughout mid-turn
       const rotY = -p * 180 + bend * 22;
 
-      // Apply hardware-accelerated 3D transform to turning sheet
+      // Hardware-accelerated 3D transform on turning sheet
       pageSheet.style.transform = `translate3d(${tx}px, 0, ${tz}px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg)`;
 
       // 2. Dynamic Specular Sheen Wave along Curvature
-      if (p > 0.01 && p < 0.97) {
-        sheen.style.opacity = `${bend * 0.7}`;
-        // Move light sweep across the paper as it bends
+      if (p > 0.01 && p < 0.95) {
+        sheen.style.opacity = `${bend * 0.65}`;
         const sheenX = (1 - p) * 100;
         sheen.style.background = `linear-gradient(
           to right,
           transparent ${Math.max(0, sheenX - 30)}%,
-          rgba(255, 255, 255, 0.28) ${sheenX}%,
-          rgba(0, 0, 0, 0.45) ${Math.min(100, sheenX + 15)}%,
+          rgba(255, 255, 255, 0.3) ${sheenX}%,
+          rgba(0, 0, 0, 0.4) ${Math.min(100, sheenX + 15)}%,
           transparent ${Math.min(100, sheenX + 35)}%
         )`;
       } else {
         sheen.style.opacity = "0";
       }
 
-      // 3. Dynamic Soft Cast Shadow on Revealed Workspace
-      if (p > 0.02 && p < 0.98) {
-        shadow.style.opacity = `${bend * 0.75}`;
+      // 3. Dynamic Soft Cast Shadow on Workspace
+      if (p > 0.02 && p < 0.96) {
+        shadow.style.opacity = `${bend * 0.7}`;
         const shadowX = p * 100;
         shadow.style.background = `linear-gradient(
           to right,
           rgba(0, 0, 0, 0.75) 0%,
           rgba(0, 0, 0, 0.35) ${Math.max(0, shadowX - 15)}%,
-          rgba(0, 0, 0, 0.12) ${shadowX}%,
+          rgba(0, 0, 0, 0.1) ${shadowX}%,
           transparent ${Math.min(100, shadowX + 25)}%
         )`;
       } else {
         shadow.style.opacity = "0";
       }
 
-      // 4. Clean Settled State: Hide sheet completely once turn is finished
-      if (p >= 0.96) {
-        const fade = Math.max(0, (1 - p) / 0.04);
+      // 4. Settling onto Left Spine: Smoothly dissolve as turn completes
+      if (p >= 0.92) {
+        const fade = Math.max(0, (1 - p) / 0.08);
         pageSheet.style.opacity = `${fade}`;
-        pageSheet.style.visibility = p >= 0.998 ? "hidden" : "visible";
+        pageSheet.style.visibility = p >= 0.97 ? "hidden" : "visible";
       } else {
         pageSheet.style.opacity = "1";
         pageSheet.style.visibility = "visible";
+      }
+
+      // 5. Pointer-Events Management:
+      // When flat on cover (p <= 0.02), planets are interactive.
+      // The moment turn begins (p > 0.02), disable pointer events on turning sheet so it NEVER blocks workspace clicks!
+      if (p <= 0.02) {
+        pageSheet.style.pointerEvents = "auto";
+      } else {
+        pageSheet.style.pointerEvents = "none";
       }
     };
 
@@ -156,7 +164,7 @@ export function BookPageTransition({
     <div
       ref={containerRef}
       className="relative w-full"
-      style={{ height: "240vh" }} // 2.4x viewport height gives natural physical resistance
+      style={{ height: "160vh" }} // 1.6x viewport height: quick, responsive 1-flick scroll distance
     >
       {/* Pinned Sticky Viewport with High-Precision 3D Perspective */}
       <div
