@@ -374,7 +374,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     // ==========================================
     if (isWebGL && renderer) {
       const scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x06080d, 0.008);
+      // Subtle cosmic fog (reduced density ensures distant planets like Saturn, Uranus, Neptune are clearly visible)
+      scene.fog = new THREE.FogExp2(0x06080d, 0.002);
 
       const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 800);
       camera.position.set(0, 36, 62);
@@ -388,7 +389,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       renderer.domElement.style.height = "100%";
       renderer.domElement.style.display = "block";
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.25;
+      // High-vibrancy exposure ensures planets and sun are brilliantly illuminated
+      renderer.toneMappingExposure = 1.6;
       renderer.shadowMap.enabled = false;
       container.appendChild(renderer.domElement);
 
@@ -403,43 +405,71 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const sunGroup = new THREE.Group();
       scene.add(sunGroup);
 
+      // 1. Brilliant Luminous Sun Mesh & Additive Corona Shells
       const sunTexture = createSunTexture();
       createdTextures.push(sunTexture);
       const sunGeo = new THREE.SphereGeometry(3.0, 64, 64);
       const sunMat = new THREE.MeshBasicMaterial({
         map: sunTexture,
-        color: 0xffedd5,
+        color: 0xffffff,
       });
       const sunMesh = new THREE.Mesh(sunGeo, sunMat);
       sunGroup.add(sunMesh);
 
-      const chromoGeo = new THREE.SphereGeometry(3.12, 32, 32);
+      // Inner Chromosphere Aura (Additive glowing golden-orange mantle)
+      const chromoGeo = new THREE.SphereGeometry(3.18, 32, 32);
       const chromoMat = new THREE.MeshBasicMaterial({
-        color: 0xf97316,
+        color: 0xf59e0b,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.65,
         side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
       });
       const chromoMesh = new THREE.Mesh(chromoGeo, chromoMat);
       sunGroup.add(chromoMesh);
 
-      const coronaGeo = new THREE.SphereGeometry(3.45, 32, 32);
+      // Mid Corona Halo (Radiant warm amber flare)
+      const coronaGeo = new THREE.SphereGeometry(3.65, 32, 32);
       const coronaMat = new THREE.MeshBasicMaterial({
         color: 0xfbbf24,
         transparent: true,
-        opacity: 0.18,
+        opacity: 0.45,
         side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
       });
       const coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
       sunGroup.add(coronaMesh);
 
-      const sunPointLight = new THREE.PointLight(0xfff7ed, 6.5, 180, 0.55);
+      // Outer Solar Flare Bloom (Atmospheric diffusion glow)
+      const outerHaloGeo = new THREE.SphereGeometry(4.35, 32, 32);
+      const outerHaloMat = new THREE.MeshBasicMaterial({
+        color: 0xf97316,
+        transparent: true,
+        opacity: 0.28,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+      });
+      const outerHaloMesh = new THREE.Mesh(outerHaloGeo, outerHaloMat);
+      sunGroup.add(outerHaloMesh);
+
+      // 2. High-Power Solar Point Light (Primary illumination reaching out to Neptune)
+      const sunPointLight = new THREE.PointLight(0xfff5ea, 16.0, 350, 0.22);
       sunPointLight.position.set(0, 0, 0);
       sunPointLight.castShadow = false;
       scene.add(sunPointLight);
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.18);
+      // Secondary Warm Core Fill Light
+      const sunWarmFill = new THREE.PointLight(0xfbbf24, 8.0, 180, 0.35);
+      sunWarmFill.position.set(0, 0, 0);
+      scene.add(sunWarmFill);
+
+      // 3. Balanced Ambient Light (Raised to 0.75 so shadowed sides of planets remain crisp and visible)
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
       scene.add(ambientLight);
+
+      // 4. Cosmic Hemisphere Light (Soft sky-ground gradient fill for deep planetary contrast)
+      const hemiLight = new THREE.HemisphereLight(0xffedd5, 0x1e293b, 0.55);
+      scene.add(hemiLight);
 
       const starCount = 2400;
       const starGeo = new THREE.BufferGeometry();
@@ -529,9 +559,9 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           pts.map((p) => new THREE.Vector3(p.x, 0, p.y)),
         );
         const orbitMat = new THREE.LineBasicMaterial({
-          color: 0xffffff,
+          color: 0x94a3b8,
           transparent: true,
-          opacity: 0.09,
+          opacity: 0.22,
         });
         const orbitLine = new THREE.LineLoop(orbitGeo, orbitMat);
         scene.add(orbitLine);
@@ -570,10 +600,13 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         }
         createdTextures.push(texture);
 
+        // Highly luminous planet material with emissive identity glow
         const mat = new THREE.MeshStandardMaterial({
           map: texture,
-          roughness: planet.key === "earth" ? 0.45 : 0.7,
-          metalness: 0.1,
+          roughness: planet.key === "earth" ? 0.35 : 0.52,
+          metalness: 0.12,
+          emissive: new THREE.Color(planet.colorHex),
+          emissiveIntensity: 0.26, // Emits vibrant color so the planet is never pitch-black
         });
 
         const geo = new THREE.SphereGeometry(planet.displayRadius, 48, 48);
@@ -588,10 +621,11 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         if (planet.hasMoon) {
           const atmoGeo = new THREE.SphereGeometry(planet.displayRadius * 1.04, 32, 32);
           const atmoMat = new THREE.MeshBasicMaterial({
-            color: 0x60a5fa,
+            color: 0x38bdf8,
             transparent: true,
-            opacity: 0.22,
+            opacity: 0.35,
             side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
           });
           const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
           mesh.add(atmoMesh);
@@ -601,7 +635,9 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           const moonGeo = new THREE.SphereGeometry(0.14, 24, 24);
           const moonMat = new THREE.MeshStandardMaterial({
             map: moonTexture,
-            roughness: 0.85,
+            roughness: 0.65,
+            emissive: new THREE.Color(0xd1d5db),
+            emissiveIntensity: 0.22,
           });
           moonMesh = new THREE.Mesh(moonGeo, moonMat);
           group.add(moonMesh);
@@ -629,8 +665,10 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
             map: ringTexture,
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.95,
-            roughness: 0.6,
+            opacity: 0.98,
+            roughness: 0.45,
+            emissive: new THREE.Color(0xfef08a),
+            emissiveIntensity: 0.28,
           });
           const ring = new THREE.Mesh(ringGeo, ringMat);
           ring.rotation.x = Math.PI / 2 + THREE.MathUtils.degToRad(planet.axialTiltDeg);
@@ -642,10 +680,11 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           const uRingOuter = planet.displayRadius * 1.58;
           const uRingGeo = new THREE.RingGeometry(uRingInner, uRingOuter, 64);
           const uRingMat = new THREE.MeshBasicMaterial({
-            color: 0xa5f3fc,
+            color: 0x38bdf8,
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.26,
+            opacity: 0.55,
+            blending: THREE.AdditiveBlending,
           });
           const uRingMesh = new THREE.Mesh(uRingGeo, uRingMat);
           uRingMesh.rotation.x = Math.PI / 2;
@@ -710,43 +749,26 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const tempVec = new THREE.Vector3();
 
       let isSystemPaused = false;
-      let isSystemTurning = false;
-      let frameCounter = 0;
 
-      // Intelligent Rendering Strategy: Pause WebGL when workspace is revealed (p >= 0.95),
-      // throttle during active curl (p > 0.02) to maximize GPU compositor smoothness.
-      const handlePageState = (e: Event) => {
-        const customEv = e as CustomEvent<{ state: string; progress: number }>;
-        if (!customEv.detail) return;
-        const state = customEv.detail.state;
-        if (state === "hidden") {
-          isSystemPaused = true;
-          isSystemTurning = false;
-        } else if (state === "turning") {
-          isSystemPaused = false;
-          isSystemTurning = true;
-          // Hide DOM labels when page is actively curling to eliminate 8 DOM mutations per frame
-          planetsList.forEach((p) => {
-            const labelEl = document.getElementById(`label-${p.data.key}`);
-            if (labelEl) {
-              labelEl.style.display = "none";
-              labelEl.style.opacity = "0";
-            }
+      // Intelligent Rendering: Automatically pause WebGL loop when scrolled out of view or tab inactive
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            isSystemPaused = !entry.isIntersecting;
           });
-        } else if (state === "cover") {
-          isSystemPaused = false;
-          isSystemTurning = false;
-        }
-      };
-
-      window.addEventListener("codeforge-page-state", handlePageState);
+        },
+        { threshold: 0.05 }
+      );
+      if (container) {
+        observer.observe(container);
+      }
 
       const handleVisibilityChange = () => {
         if (document.hidden) {
           isSystemPaused = true;
-        } else {
-          const isAtWorkspace = typeof window !== "undefined" && window.scrollY >= (window.innerHeight * 0.5);
-          isSystemPaused = isAtWorkspace;
+        } else if (container) {
+          const rect = container.getBoundingClientRect();
+          isSystemPaused = rect.bottom <= 0 || rect.top >= window.innerHeight;
         }
       };
       document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -756,14 +778,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
 
-        // 1. If paused (hidden behind workspace or browser tab inactive), halt WebGL rendering completely
+        // Pause WebGL rendering when scrolled out of view or tab inactive (0 FPS, zero GPU load)
         if (isSystemPaused) {
-          return;
-        }
-
-        // 2. If actively turning, throttle scene rendering to 30 FPS to yield GPU power to page compositor
-        frameCounter++;
-        if (isSystemTurning && (frameCounter % 2 !== 0)) {
           return;
         }
 
@@ -809,30 +825,28 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           }
         });
 
-        // 3. Only project & update DOM labels when on the flat cover (not during 3D page turn)
-        if (!isSystemTurning) {
-          planetsList.forEach((p) => {
-            const labelEl = document.getElementById(`label-${p.data.key}`);
-            if (!labelEl) return;
+        // Update DOM labels smoothly
+        planetsList.forEach((p) => {
+          const labelEl = document.getElementById(`label-${p.data.key}`);
+          if (!labelEl) return;
 
-            p.mesh.getWorldPosition(tempVec);
-            tempVec.y -= p.data.displayRadius * 1.35;
-            tempVec.project(camera);
+          p.mesh.getWorldPosition(tempVec);
+          tempVec.y -= p.data.displayRadius * 1.35;
+          tempVec.project(camera);
 
-            const inFront = tempVec.z < 1.0;
-            const screenX = (tempVec.x * 0.5 + 0.5) * width;
-            const screenY = (-tempVec.y * 0.5 + 0.5) * height;
+          const inFront = tempVec.z < 1.0;
+          const screenX = (tempVec.x * 0.5 + 0.5) * width;
+          const screenY = (-tempVec.y * 0.5 + 0.5) * height;
 
-            if (inFront && screenX > -80 && screenX < width + 80 && screenY > -50 && screenY < height + 50) {
-              labelEl.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0)`;
-              labelEl.style.opacity = "1";
-              labelEl.style.display = "block";
-            } else {
-              labelEl.style.opacity = "0";
-              labelEl.style.display = "none";
-            }
-          });
-        }
+          if (inFront && screenX > -80 && screenX < width + 80 && screenY > -50 && screenY < height + 50) {
+            labelEl.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0)`;
+            labelEl.style.opacity = "1";
+            labelEl.style.display = "block";
+          } else {
+            labelEl.style.opacity = "0";
+            labelEl.style.display = "none";
+          }
+        });
 
         stars.rotation.y = elapsed * 0.003;
         renderer!.render(scene, camera);
@@ -853,8 +867,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
       return () => {
         cancelAnimationFrame(animationFrameId);
+        observer.disconnect();
         window.removeEventListener("resize", handleResize);
-        window.removeEventListener("codeforge-page-state", handlePageState);
         document.removeEventListener("visibilitychange", handleVisibilityChange);
         renderer!.domElement.removeEventListener("pointerdown", handlePointerDown);
         renderer!.domElement.removeEventListener("pointerup", handlePointerUp);
@@ -922,40 +936,26 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     let animationFrameId: number;
     let lastTime = performance.now();
     let is2DPaused = false;
-    let is2DTurning = false;
-    let frameCounter2D = 0;
 
-    const handlePageState2D = (e: Event) => {
-      const customEv = e as CustomEvent<{ state: string; progress: number }>;
-      if (!customEv.detail) return;
-      const state = customEv.detail.state;
-      if (state === "hidden") {
-        is2DPaused = true;
-        is2DTurning = false;
-      } else if (state === "turning") {
-        is2DPaused = false;
-        is2DTurning = true;
-        PLANETS.forEach((planet) => {
-          const labelEl = document.getElementById(`label-${planet.key}`);
-          if (labelEl) {
-            labelEl.style.display = "none";
-            labelEl.style.opacity = "0";
-          }
+    // Intelligent Rendering: Automatically pause 2D canvas loop when scrolled out of view or tab inactive
+    const observer2D = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          is2DPaused = !entry.isIntersecting;
         });
-      } else if (state === "cover") {
-        is2DPaused = false;
-        is2DTurning = false;
-      }
-    };
-
-    window.addEventListener("codeforge-page-state", handlePageState2D);
+      },
+      { threshold: 0.05 }
+    );
+    if (container) {
+      observer2D.observe(container);
+    }
 
     const handleVisibilityChange2D = () => {
       if (document.hidden) {
         is2DPaused = true;
-      } else {
-        const isAtWorkspace = typeof window !== "undefined" && window.scrollY >= (window.innerHeight * 0.5);
-        is2DPaused = isAtWorkspace;
+      } else if (container) {
+        const rect = container.getBoundingClientRect();
+        is2DPaused = rect.bottom <= 0 || rect.top >= window.innerHeight;
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange2D);
@@ -993,11 +993,6 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         return;
       }
 
-      frameCounter2D++;
-      if (is2DTurning && (frameCounter2D % 2 !== 0)) {
-        return;
-      }
-
       const now = performance.now();
       const delta = Math.min((now - lastTime) / 1000, 0.1);
       const elapsed = now / 1000;
@@ -1019,19 +1014,19 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const cx = width / 2;
       const cy = height / 2;
 
-      // 2. Draw Orbital Ellipses
+      // 2. Draw Orbital Ellipses (Luminous, clearly visible orbits)
       PLANETS.forEach((planet) => {
         const rx = planet.displayOrbitRadius * scale;
         const ry = rx * 0.44;
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.22)";
+        ctx.lineWidth = 1.2;
         ctx.stroke();
       });
 
       // 3. Draw Asteroid Belt
-      ctx.fillStyle = "rgba(156, 163, 175, 0.35)";
+      ctx.fillStyle = "rgba(203, 213, 225, 0.45)";
       for (let i = 0; i < 240; i++) {
         const angle = (i * 0.026) + elapsed * 0.015;
         const r = (20.5 + (i % 7) * 0.6) * scale;
@@ -1040,32 +1035,45 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         ctx.fillRect(ax, ay, 1.2, 1.2);
       }
 
-      // 4. Central Sun
-      // Corona glow
-      const coronaRad = 62 + Math.sin(elapsed * 3) * 3;
-      const corona = ctx.createRadialGradient(cx, cy, 12, cx, cy, coronaRad);
-      corona.addColorStop(0, "rgba(251, 191, 36, 0.45)");
-      corona.addColorStop(0.5, "rgba(249, 115, 22, 0.2)");
+      // 4. Central Sun (Brilliantly Illuminated Core & Deep Corona Bloom)
+      // Outer Atmospheric Diffusion Glow
+      const outerCoronaRad = 135 + Math.sin(elapsed * 2.5) * 8;
+      const outerCorona = ctx.createRadialGradient(cx, cy, 20, cx, cy, outerCoronaRad);
+      outerCorona.addColorStop(0, "rgba(249, 115, 22, 0.35)");
+      outerCorona.addColorStop(0.5, "rgba(245, 158, 11, 0.15)");
+      outerCorona.addColorStop(1, "transparent");
+      ctx.fillStyle = outerCorona;
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerCoronaRad, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mid Radiant Corona
+      const coronaRad = 85 + Math.sin(elapsed * 3.5) * 5;
+      const corona = ctx.createRadialGradient(cx, cy, 14, cx, cy, coronaRad);
+      corona.addColorStop(0, "rgba(254, 240, 138, 0.85)");
+      corona.addColorStop(0.35, "rgba(251, 191, 36, 0.55)");
+      corona.addColorStop(0.7, "rgba(249, 115, 22, 0.25)");
       corona.addColorStop(1, "transparent");
       ctx.fillStyle = corona;
       ctx.beginPath();
       ctx.arc(cx, cy, coronaRad, 0, Math.PI * 2);
       ctx.fill();
 
-      // Photosphere
-      const sunGrad = ctx.createRadialGradient(cx - 5, cy - 5, 4, cx, cy, 32);
-      sunGrad.addColorStop(0, "#fffbeb");
-      sunGrad.addColorStop(0.4, "#facc15");
+      // Blazing Photosphere
+      const sunGrad = ctx.createRadialGradient(cx - 5, cy - 5, 4, cx, cy, 34);
+      sunGrad.addColorStop(0, "#ffffff");
+      sunGrad.addColorStop(0.2, "#fffbeb");
+      sunGrad.addColorStop(0.5, "#facc15");
       sunGrad.addColorStop(0.85, "#ea580c");
-      sunGrad.addColorStop(1, "#9a3412");
+      sunGrad.addColorStop(1, "#c2410c");
       ctx.fillStyle = sunGrad;
       ctx.beginPath();
-      ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 34, 0, Math.PI * 2);
       ctx.fill();
 
       // Sun Identity Text
       ctx.font = "bold 8px monospace";
-      ctx.fillStyle = "rgba(124, 45, 18, 0.75)";
+      ctx.fillStyle = "rgba(124, 45, 18, 0.85)";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("CODEFORGE AI", cx, cy);
@@ -1079,27 +1087,28 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         const py = cy + Math.sin(angles[i]) * ry;
         const pr = Math.max(6, planet.displayRadius * 13);
 
-        // Planet Body with 3D Radial Shading
+        // Planet Body with Bright Specular Reflection and Deep Planetary Fill
         const pGrad = ctx.createRadialGradient(
           px - pr * 0.35,
           py - pr * 0.35,
-          pr * 0.1,
+          pr * 0.08,
           px,
           py,
           pr,
         );
-        pGrad.addColorStop(0, planet.colorHex);
-        pGrad.addColorStop(0.7, planet.colorHex);
-        pGrad.addColorStop(1, "#090a0f");
+        pGrad.addColorStop(0, "#ffffff");
+        pGrad.addColorStop(0.18, planet.colorHex);
+        pGrad.addColorStop(0.75, planet.colorHex);
+        pGrad.addColorStop(1, "rgba(15, 23, 42, 0.85)");
         ctx.fillStyle = pGrad;
         ctx.beginPath();
         ctx.arc(px, py, pr, 0, Math.PI * 2);
         ctx.fill();
 
-        // Atmospheric rim
+        // Vivid Atmospheric Rim Glow
         ctx.strokeStyle = planet.colorHex;
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.65;
         ctx.stroke();
         ctx.globalAlpha = 1.0;
 
@@ -1108,9 +1117,9 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           const moonAngle = elapsed * 2.2 * currentSpeed;
           const mx = px + Math.cos(moonAngle) * (pr + 7);
           const my = py + Math.sin(moonAngle) * (pr + 7) * 0.44;
-          ctx.fillStyle = "#d1d5db";
+          ctx.fillStyle = "#e2e8f0";
           ctx.beginPath();
-          ctx.arc(mx, my, 2.2, 0, Math.PI * 2);
+          ctx.arc(mx, my, 2.5, 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -1121,8 +1130,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           ctx.rotate(-0.25);
           ctx.beginPath();
           ctx.ellipse(0, 0, pr * 2.6, pr * 0.85, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(202, 138, 4, 0.75)";
-          ctx.lineWidth = 3.5;
+          ctx.strokeStyle = "rgba(254, 240, 138, 0.85)";
+          ctx.lineWidth = 3.8;
           ctx.stroke();
 
           // Cassini division
@@ -1146,14 +1155,12 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
           ctx.restore();
         }
 
-        // Update 2D Floating Label (only when on flat cover)
-        if (!is2DTurning) {
-          const labelEl = document.getElementById(`label-${planet.key}`);
-          if (labelEl) {
-            labelEl.style.transform = `translate3d(${px.toFixed(1)}px, ${(py + pr + 12).toFixed(1)}px, 0)`;
-            labelEl.style.opacity = "1";
-            labelEl.style.display = "block";
-          }
+        // Update 2D Floating Label
+        const labelEl = document.getElementById(`label-${planet.key}`);
+        if (labelEl) {
+          labelEl.style.transform = `translate3d(${px.toFixed(1)}px, ${(py + pr + 12).toFixed(1)}px, 0)`;
+          labelEl.style.opacity = "1";
+          labelEl.style.display = "block";
         }
       });
     };
@@ -1172,8 +1179,8 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      observer2D.disconnect();
       window.removeEventListener("resize", handleResize2D);
-      window.removeEventListener("codeforge-page-state", handlePageState2D);
       document.removeEventListener("visibilitychange", handleVisibilityChange2D);
       canvas.removeEventListener("click", handleCanvasClick);
       if (container.contains(canvas)) {

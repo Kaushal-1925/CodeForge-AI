@@ -97,7 +97,9 @@ export function Dashboard() {
             </div>
           )}
 
-          {state.status === "success" && <ProjectList projects={state.projects} />}
+          {state.status === "success" && (
+            <ProjectList projects={state.projects} onDeleted={refresh} />
+          )}
         </div>
       </section>
     </div>

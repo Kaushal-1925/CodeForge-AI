@@ -1,1 +1,23 @@
+==================================================
+  CodeForge AI - Quick Start Guide
+==================================================
+
+METHOD 1 (Recommended on Windows):
+Double-click "run_frontend.bat" directly from File Explorer.
+This automatically starts both the FastAPI backend and Next.js frontend, and opens http://localhost:3000 in your browser.
+
+METHOD 2 (Windows PowerShell):
 powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
+
+METHOD 3 (WSL / Linux / macOS):
+./scripts/run-dev.sh
+
+METHOD 4 (Docker Compose):
+docker compose up --build
+
+==================================================
+Service URLs:
+  - Frontend Dashboard: http://localhost:3000
+  - Backend API Docs:   http://127.0.0.1:8000/docs
+  - Health Check:       http://127.0.0.1:8000/api/v1/health
+==================================================

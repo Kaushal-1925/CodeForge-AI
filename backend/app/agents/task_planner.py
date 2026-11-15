@@ -93,6 +93,7 @@ TASK RULES:
 8. Do not invent requirements.
 9. Do not write implementation code.
 10. Return ONLY valid JSON.
+11. CodeForge strictly uses synchronous SQLAlchemy with psycopg. NEVER mention or use asyncpg, SQLite, python-dotenv, or database.py in any task title or description.
 
 The JSON must have exactly this structure:
 
@@ -180,6 +181,17 @@ def task_planner_agent(
         requirements=state["requirements"],
         architecture=state["architecture"],
     )
+
+    validation_errors = state.get("validation_errors", [])
+    if validation_errors:
+        prompt += f"""
+
+CRITICAL FIX REQUIRED:
+The previous task plan was rejected by the Task Validator with these errors:
+{chr(10).join(f"- {error}" for error in validation_errors)}
+
+You MUST correct these errors. Under no circumstances should any task mention or use forbidden technologies (such as asyncpg, SQLite, python-dotenv, or database.py).
+"""
 
     try:
         response = _get_model().invoke(prompt)

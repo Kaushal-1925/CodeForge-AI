@@ -16,3 +16,9 @@ dev = [
     "pytest",
     "httpx",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "backend",
+]

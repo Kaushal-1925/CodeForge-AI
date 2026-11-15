@@ -1,8 +1,18 @@
 # Running CodeForge AI on Another PC
 
 This guide walks through a clean, end-to-end setup of CodeForge AI on a separate machine
-(x64 Intel laptop recommended). The code is pushed to the `aromatic-wander` branch of
+(x64 Intel laptop or Windows/Mac/Linux recommended). The code is pushed to the `rebuild` branch of
 https://github.com/Kaushal-1925/CodeForge-AI.git.
+
+## Quick Launch on Windows (1-Click)
+
+On Windows, you can simply clone and double-click **`run_frontend.bat`**:
+```bash
+git clone https://github.com/Kaushal-1925/CodeForge-AI.git
+cd CodeForge-AI
+git checkout rebuild
+```
+Double-click `run_frontend.bat` from File Explorer. It automatically starts both backend and frontend servers and launches your browser to `http://localhost:3000`.
 
 ## 1. Prerequisites (install on the new PC)
 
@@ -38,10 +48,10 @@ npm --version
 ```bash
 git clone https://github.com/Kaushal-1925/CodeForge-AI.git
 cd CodeForge-AI
-git checkout aromatic-wander
+git checkout rebuild
 ```
 
-The `aromatic-wander` branch contains the full rebuilt backend, frontend, migrations, and
+The `rebuild` branch contains the full rebuilt backend, frontend, migrations, and
 documentation. `master` preserves the legacy implementation for reference only.
 
 ## 3. Configure the environment

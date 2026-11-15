@@ -1,13 +1,16 @@
+import shutil
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.dependencies import get_db
 from app.models.project import Project
+from app.models.workflow_run import WorkflowRun
 from app.schemas.project import ProjectCreate, ProjectResponse
+from app.services.workflow_execution_service import WORKFLOW_RUNS_DIRECTORY
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -67,3 +70,37 @@ def get_project(
         )
 
     return project
+
+
+@router.delete(
+    "/{project_id}",
+    status_code=204,
+    summary="Delete a project",
+)
+def delete_project(
+    project_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+) -> Response:
+    project = db.get(Project, project_id)
+
+    if project is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found",
+        )
+
+    # 1. Clean up associated workflow runs and sandbox directories on disk
+    runs_statement = select(WorkflowRun).where(WorkflowRun.project_id == project_id)
+    runs = list(db.scalars(runs_statement).all())
+    for run in runs:
+        run_workspace = WORKFLOW_RUNS_DIRECTORY / str(run.id)
+        if run_workspace.exists():
+            shutil.rmtree(run_workspace, ignore_errors=True)
+        db.delete(run)
+
+    # 2. Delete the project itself
+    db.delete(project)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

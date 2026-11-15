@@ -81,3 +81,15 @@ def test_django_is_rejected():
 
 def test_empty_architecture_is_rejected():
     assert validate_architecture("") == ["Architecture is empty."]
+
+
+def test_negated_forbidden_patterns_are_accepted():
+    architecture = """
+    Backend: FastAPI (do not use Flask or Django)
+    Database: PostgreSQL (no SQLite)
+    ORM: SQLAlchemy (no new database.py)
+    Driver: psycopg (not asyncpg)
+    """
+
+    assert validate_architecture(architecture) == []
+

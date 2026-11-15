@@ -15,7 +15,7 @@ const PROMPT_SUGGESTIONS = [
   {
     label: "URL Shortener",
     prompt:
-      "Create a FastAPI REST application that generates 6-character unique short codes for long URLs, handles redirects to the original destination, and tracks total visit counts per link. Store data in SQLite and include unit tests testing duplicate links, 404s for invalid slugs, and redirect mechanics.",
+      "Create a FastAPI REST application that generates 6-character unique short codes for long URLs, handles redirects to the original destination, and tracks total visit counts per link. Store data in PostgreSQL using SQLAlchemy and include unit tests testing duplicate links, 404s for invalid slugs, and redirect mechanics.",
   },
   {
     label: "Markdown Parser",

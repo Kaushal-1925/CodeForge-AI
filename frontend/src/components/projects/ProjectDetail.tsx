@@ -9,7 +9,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { NewRunForm } from "@/components/workflows/NewRunForm";
 import { RunList } from "@/components/workflows/RunList";
-import { getProject, listWorkflowRuns } from "@/lib/api/client";
+import { deleteProject, getProject, listWorkflowRuns } from "@/lib/api/client";
 import type { Project, WorkflowRun } from "@/lib/api/types";
 import { formatStatus, projectStatusTone } from "@/lib/workflow";
 
@@ -26,6 +26,9 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
   const router = useRouter();
   const [state, setState] = useState<ProjectState>({ status: "loading" });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +59,19 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
 
   function handleRunCreated(run: WorkflowRun) {
     router.push(`/projects/${projectId}/runs/${run.id}`);
+  }
+
+  async function handleConfirmDelete() {
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteProject(projectId);
+      router.push("/");
+    } catch (error: unknown) {
+      setIsDeleting(false);
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete project");
+    }
   }
 
   if (state.status === "loading") {
@@ -106,9 +122,21 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
             {project.description ?? "No description provided."}
           </p>
         </div>
-        <StatusBadge tone={projectStatusTone(project.status)}>
-          {formatStatus(project.status)}
-        </StatusBadge>
+        <div className="flex items-center gap-3">
+          <StatusBadge tone={projectStatusTone(project.status)}>
+            {formatStatus(project.status)}
+          </StatusBadge>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setDeleteError(null);
+              setShowDeleteModal(true);
+            }}
+            aria-label={`Delete project ${project.name}`}
+          >
+            Delete project
+          </Button>
+        </div>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -147,6 +175,76 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
         </div>
         <RunList projectId={projectId} runs={runs} />
       </section>
+
+      {/* Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-project-title"
+          aria-describedby="delete-project-description"
+        >
+          <div className="relative w-full max-w-md rounded-2xl border border-red-500/20 bg-[#0d0f17]/95 p-6 shadow-2xl backdrop-blur-2xl">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-red-400">
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.75"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+                  />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 id="delete-project-title" className="text-base font-semibold text-white">
+                  Delete Project
+                </h3>
+                <p id="delete-project-description" className="mt-2 text-xs leading-relaxed text-neutral-300">
+                  Are you sure you want to delete{" "}
+                  <strong className="font-medium text-white">"{project.name}"</strong>?
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  This will permanently remove the project, its workflow runs, and workspace files. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button
+                variant="secondary"
+                disabled={isDeleting}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteError(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+              >
+                {isDeleting ? "Deleting..." : "Delete Project"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

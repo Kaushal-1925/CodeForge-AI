@@ -1,8 +1,11 @@
+import logging
 from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.database.session import SessionLocal
 from app.graph.state import CodeForgeState
@@ -82,6 +85,7 @@ def build_initial_state(
         "iteration": 0,
         "retry_count": 0,
         "architecture_retry_count": 0,
+        "task_retry_count": 0,
     }
 
 
@@ -144,10 +148,19 @@ def execute_workflow_run(
                 "completed",
             )
         else:
+            fail_reason = None
+            if final_state.get("validation_errors"):
+                fail_reason = "Validation errors: " + "; ".join(final_state["validation_errors"])
+            elif final_state.get("test_results") and isinstance(final_state["test_results"], dict):
+                stderr = final_state["test_results"].get("stderr")
+                if stderr:
+                    fail_reason = f"Test failure: {str(stderr)[:200]}"
+
             workflow_run = update_workflow_run(
                 db=db,
                 workflow_run_id=workflow_run.id,
                 status="failed",
+                current_task=fail_reason or workflow_run.current_task,
             )
             _set_project_status(
                 db,
@@ -157,11 +170,13 @@ def execute_workflow_run(
 
         return workflow_run, final_state
 
-    except Exception:
+    except Exception as exc:
+        logger.exception(f"Workflow execution exception for run {workflow_run_id}: {exc}")
         update_workflow_run(
             db=db,
             workflow_run_id=workflow_run.id,
             status="failed",
+            current_task=f"Error: {exc}",
         )
         _set_project_status(
             db,
@@ -196,7 +211,8 @@ def run_workflow_in_background(
             initial_state=initial_state,
         )
 
-    except Exception:
+    except Exception as exc:
+        logger.exception(f"Workflow background execution failed for run {workflow_run_id}: {exc}")
         workflow_run = db.get(
             WorkflowRun,
             workflow_run_id,
@@ -207,6 +223,7 @@ def run_workflow_in_background(
                 db=db,
                 workflow_run_id=workflow_run_id,
                 status="failed",
+                current_task=f"Background error: {exc}",
             )
             _set_project_status(
                 db,
