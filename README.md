@@ -4,7 +4,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16+-black.svg?style=flat&logo=next.js&logoColor=white)](https://nextjs.org)
 [![LangGraph](https://img.shields.io/badge/Orchestrator-LangGraph-blue.svg?style=flat)](https://github.com/langchain-ai/langgraph)
 [![LLM](https://img.shields.io/badge/LLM-DeepSeek--V3%20%2F%20R1-4D6BFE.svg?style=flat)](https://platform.deepseek.com)
-[![Tests](https://img.shields.io/badge/Tests-131%20Passed-brightgreen.svg?style=flat)](#testing--verification)
+[![Tests](https://img.shields.io/badge/Tests-148%20Passed-brightgreen.svg?style=flat)](#testing--verification)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white)](https://python.org)
 [![Node](https://img.shields.io/badge/Node.js-%3E=20.0.0-339933.svg?style=flat&logo=node.js&logoColor=white)](https://nodejs.org)
 
@@ -20,10 +20,11 @@ CodeForge AI is a production-grade autonomous multi-agent platform designed to a
 - [Technical Requirements](#technical-requirements)
 - [API Keys & Configuration](#api-keys--configuration)
 - [Quick Start Guide](#quick-start-guide)
-  - [1. Single-Command Launch (WSL / Linux / macOS)](#1-single-command-launch-wsl--linux--macos)
+  - [1. Single-Click Windows Launcher (`run_frontend.bat`)](#1-single-click-windows-launcher-run_frontendbat)
   - [2. Single-Command Launch (Windows PowerShell)](#2-single-command-launch-windows-powershell)
-  - [3. Docker Compose (Full Stack)](#3-docker-compose-full-stack)
-  - [4. Manual Host Execution](#4-manual-host-execution)
+  - [3. Single-Command Launch (WSL / Linux / macOS)](#3-single-command-launch-wsl--linux--macos)
+  - [4. Docker Compose (Full Stack)](#4-docker-compose-full-stack)
+  - [5. Manual Host Execution](#5-manual-host-execution)
 - [Live Demonstration Guide](#live-demonstration-guide)
 - [REST API Endpoints](#rest-api-endpoints)
 - [Testing & Verification](#testing--verification)
@@ -132,7 +133,31 @@ DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
 
 ## Quick Start Guide
 
-### 1. Single-Command Launch (WSL / Linux / macOS)
+### 1. Single-Click Windows Launcher (`run_frontend.bat`)
+
+**Easiest way to run on Windows:**
+Simply double-click `run_frontend.bat` from File Explorer (or run from CMD):
+```cmd
+run_frontend.bat
+```
+This automatically:
+- Checks and initializes `.env` from `.env.example` if needed.
+- Starts the FastAPI backend with SQLite on port 8000.
+- Starts the Next.js frontend dashboard on port 3000.
+- Automatically launches your default web browser to [http://localhost:3000](http://localhost:3000).
+
+---
+
+### 2. Single-Command Launch (Windows PowerShell)
+
+For native Windows hosts via PowerShell:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
+```
+
+---
+
+### 3. Single-Command Launch (WSL / Linux / macOS)
 
 A preconfigured dev script is provided that cleans ports, starts the FastAPI backend, and starts the Next.js frontend concurrently:
 
@@ -152,16 +177,7 @@ Access the application:
 
 ---
 
-### 2. Single-Command Launch (Windows PowerShell)
-
-For native Windows hosts (x86_64 PCs with Python 3.11 and Node):
-```powershell
-powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
-```
-
----
-
-### 3. Docker Compose (Full Stack)
+### 4. Docker Compose (Full Stack)
 
 To run the complete production stack (PostgreSQL 16 + FastAPI Backend + Next.js Frontend) in isolated containers:
 ```bash
@@ -170,7 +186,7 @@ docker compose up --build
 
 ---
 
-### 4. Manual Host Execution
+### 5. Manual Host Execution
 
 If you prefer separate terminal windows:
 
@@ -283,7 +299,9 @@ OpenCode/
 │   ├── run-dev.sh                  # One-command dual-server launcher
 │   └── build-sandbox-image.sh      # Docker test runner container builder
 ├── docker-compose.yml              # Multi-container orchestration (PostgreSQL + API + UI)
+├── run_frontend.bat                # Windows 1-click launcher for File Explorer
 ├── run-dev.ps1                     # PowerShell development launcher
+├── how_to_run.txt                  # Quick launch instructions reference
 ├── .env.example                    # Environment variable template
 └── README.md                       # Comprehensive platform documentation
 ```

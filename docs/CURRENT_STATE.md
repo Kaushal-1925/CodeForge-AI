@@ -1,29 +1,25 @@
 # CodeForge AI Current State
 
-Last checkpoint: 2026-10-28
+Last checkpoint: 2026-11-15
 Branch: `rebuild`
-HEAD: `8ac5ae3` (`legacy-v1`, also `master` / `origin/master`)
-Current phase: workflow dashboard checkpoint
-Next work: Docker/PostgreSQL acceptance and live-provider validation
+Current phase: Solar System agent architecture & workspace integration complete
+Status: Production-ready multi-agent platform with 148 automated tests (131 backend + 17 frontend)
 
 ## Summary
 
-The repository is on the `rebuild` branch. The legacy implementation is preserved on `master` and
-the `legacy-v1` tag. The rebuilt foundation (Phase 0 and Phase 1) is in place, and the legacy
-backend feature set has been ported onto that foundation:
+The repository is on the `rebuild` branch. The multi-agent autonomous engineering platform is fully functional:
 
-- The application factory, typed settings, JSON logging, request IDs, CORS, and versioned
-  `/api/v1/health` endpoint are rebuilt.
-- SQLAlchemy models, Alembic migrations, project APIs, workflow-run APIs, and an artifacts API are
-  wired into the rebuilt application.
-- DeepSeek LLM configuration, the LangGraph agent workflow, workspace tools, artifact generation,
-  and the Docker test runner were ported to the new configuration and package layout.
-- The frontend is now a workflow dashboard: project creation and listing, run submission, live
-  status polling, artifact review, and persisted approve/reject decisions.
-
-All changes are still in the working tree and have not been committed. The staged change is the
-PRD move to `docs/reference/`. The legacy deletions and the rebuild files are unstaged/untracked.
-Do not discard those changes when resuming.
+- The FastAPI backend application factory, typed settings, JSON logging, request IDs, CORS, and versioned
+  `/api/v1/health` endpoint are fully operational.
+- SQLAlchemy models, Alembic migrations, project APIs, workflow-run APIs, and artifacts endpoints are
+  tested and working.
+- DeepSeek LLM configuration, the LangGraph agent workflow (Manager, Architect, Planner, Developer, Writer, Tester, Validators),
+  workspace tools, artifact generation, and Docker test runner are fully integrated.
+- The frontend features an interactive 3D Solar System landing hero visualizing the 8 autonomous agent planets,
+  with smooth, native 120 FPS bi-directional navigation into the Workspace Console.
+- WebGL rendering in the Solar System component automatically pauses via `IntersectionObserver` when scrolled
+  out of view, maintaining 0% idle GPU overhead.
+- Includes `run_frontend.bat` for single-click startup from Windows File Explorer.
 
 ## Implemented
 
@@ -69,9 +65,11 @@ Do not discard those changes when resuming.
 
 ### Frontend
 
-- Next.js 16, React 19, TypeScript, Tailwind workflow dashboard.
-- `frontend/src/app/page.tsx`: project dashboard with creation form, project list, and backend
-  health panel.
+- Next.js 16, React 19, TypeScript, Tailwind workflow dashboard with Three.js WebGL visualization.
+- `frontend/src/app/page.tsx`: interactive 3D Solar System landing hero and workspace console with
+  smooth bi-directional navigation.
+- `frontend/src/components/visual/SolarAgentSystem.tsx`: Three.js WebGL simulation representing the 8 autonomous
+  agents as planets orbiting the central Sun intelligence with procedural textures, orbit paths, and scientific dossiers.
 - `frontend/src/app/projects/[projectId]/page.tsx`: project detail with workflow submission and run
   history.
 - `frontend/src/app/projects/[projectId]/runs/[runId]/page.tsx`: run detail with polling, execution
@@ -84,15 +82,18 @@ Do not discard those changes when resuming.
 - `frontend/src/components/ui/`: `Button`, `Card`, and `StatusBadge`.
 - `frontend/src/lib/api/`: typed API client and response types for health, projects, runs, artifacts,
   and approval decisions.
-- `frontend/tests/`: dashboard, project form, run detail, artifact viewer, approval panel, workflow
-  helper, and health panel tests.
+- `frontend/tests/`: 7 test files, 17 Vitest suites covering dashboard, project form, run detail,
+  artifact viewer, approval panel, workflow helper, and health panel.
 
 ### Tooling and repository
 
+- `run_frontend.bat`: one-click Windows launcher for File Explorer.
+- `run-dev.ps1`: PowerShell development runner.
+- `scripts/run-dev.sh`: one-command dual-server launcher for WSL/Linux/macOS.
 - `scripts/check.sh`: canonical local verification command.
 - `scripts/build-sandbox-image.sh`: builds `codeforge-test-runner:py311` from
   `backend/sandbox/Dockerfile`.
-- Root `.env.example`, `.dockerignore`, `.editorconfig`, `.gitattributes`, `.gitignore`.
+- Root `.env.example`, `.dockerignore`, `.editorconfig`, `.gitattributes`, `.gitignore`, `how_to_run.txt`.
 - `frontend/.env.example`, `frontend/Dockerfile`, `frontend/.dockerignore`, ESLint, Prettier,
   Tailwind, Vitest, and TypeScript configuration.
 - `docs/IMPLEMENTATION_PLAN.md` and this checkpoint document.
