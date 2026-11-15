@@ -2,128 +2,405 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-export type AgentKey = "architect" | "tech_lead" | "developer" | "tester";
+export type AgentKind = "LLM" | "Rule-based" | "File I/O" | "Subprocess" | "State Router";
 
-export interface AgentPlanetInfo {
-  key: AgentKey;
+export interface FullAgentInfo {
+  key: string;
   name: string;
-  callsign: string;
-  role: string;
-  orbitIndex: number;
+  shortName: string;
+  kind: AgentKind;
+  celestialRole: string;
   orbitRadius: number;
   orbitSpeed: number; // rad/s
-  inclination: number; // tilt radians
-  planetRadius: number;
+  inclination: number; // radians
+  radius: number;
   baseColor: string;
   hexColor: number;
   hasRing?: boolean;
-  hasMoon?: boolean;
-  tagline: string;
+  parentPlanetKey?: string; // If it's a moon/station orbiting a major planet
+  moonOrbitRadius?: number;
+  moonOrbitSpeed?: number;
+  reportSummary: string;
   responsibilities: string[];
   inputs: string[];
   outputs: string[];
-  langgraphRole: string;
+  rulesAndGuards: string[];
+  langgraphNode: string;
 }
 
-export const AGENT_PLANETS: Record<AgentKey, AgentPlanetInfo> = {
-  architect: {
+export const ALL_AGENTS: FullAgentInfo[] = [
+  {
+    key: "manager",
+    name: "Manager Agent",
+    shortName: "Manager",
+    kind: "LLM",
+    celestialRole: "Planet I · Requirements Synthesis",
+    orbitRadius: 4.0,
+    orbitSpeed: 0.42,
+    inclination: 0.1,
+    radius: 0.36,
+    baseColor: "#eab308",
+    hexColor: 0xeab308,
+    reportSummary:
+      "Turns the raw prompt into clean, numbered functional requirements. It is strictly forbidden from writing code.",
+    responsibilities: [
+      "Translates unstructured user prompts into discrete, numbered functional specifications.",
+      "Extracts scope constraints, boundary conditions, and acceptance criteria.",
+      "Ensures requirements strictly align with CodeForge's approved technology stack.",
+      "Maintains clean separation between user intent and architectural execution.",
+    ],
+    inputs: ["Raw natural-language user request", "Project name and metadata"],
+    outputs: ["Clean numbered functional requirements list (state['requirements'])"],
+    rulesAndGuards: [
+      "Strictly forbidden from writing implementation code.",
+      "Must number every requirement explicitly for downstream verification.",
+    ],
+    langgraphNode: "First node in the LangGraph graph (START -> manager_agent).",
+  },
+  {
     key: "architect",
     name: "Architect Agent",
-    callsign: "PLANET ARCHITECT · ORBIT I",
-    role: "System Architecture & System Contracts",
-    orbitIndex: 1,
-    orbitRadius: 4.2,
-    orbitSpeed: 0.38,
-    inclination: 0.12,
-    planetRadius: 0.36,
-    baseColor: "#60a5fa",
-    hexColor: 0x60a5fa,
+    shortName: "Architect",
+    kind: "LLM",
+    celestialRole: "Planet II · Technical Specification",
+    orbitRadius: 6.2,
+    orbitSpeed: 0.32,
+    inclination: -0.14,
+    radius: 0.42,
+    baseColor: "#38bdf8",
+    hexColor: 0x38bdf8,
     hasRing: true,
-    tagline: "Translates human intent into mathematically sound software blueprints.",
+    reportSummary:
+      "Produces a technical specification across six mandatory sections, restricted to the approved technology stack.",
     responsibilities: [
-      "Deconstructs natural-language prompts into functional engineering specifications.",
-      "Designs data models, database schemas, and RESTful API route contracts.",
-      "Selects architectural patterns, module boundaries, and external dependencies.",
-      "Validates technology stack constraints before any code is authored.",
+      "Designs software blueprints across 6 mandatory sections: Overview, Architecture, Tech Stack, API Contracts, Database Schema, and Testing Strategy.",
+      "Defines SQLAlchemy model structures, database relations, and foreign keys.",
+      "Specifies REST API endpoints, request/response models, and status codes.",
+      "Receives rejection feedback from Architecture Validator and self-corrects design flaws.",
     ],
-    inputs: ["User requirements", "Project constraints", "Approved technology stack"],
-    outputs: ["architecture.md blueprint", "SQL schema definitions", "Pydantic contract models"],
-    langgraphRole: "First node in LangGraph state machine. Produces state['architecture'].",
+    inputs: ["state['requirements'] from Manager Agent", "Optional previous validation error feedback"],
+    outputs: ["Full technical blueprint (state['architecture'])", "Data models and route contracts"],
+    rulesAndGuards: [
+      "Must include all six mandatory architectural sections.",
+      "Restricted strictly to FastAPI, SQLAlchemy, PostgreSQL/SQLite, Next.js, and pytest.",
+    ],
+    langgraphNode: "manager_agent -> architect_agent.",
   },
-  tech_lead: {
-    key: "tech_lead",
-    name: "Tech Lead Agent",
-    callsign: "PLANET TECH LEAD · ORBIT II",
-    role: "Task Decomposition & Dependency Strategy",
-    orbitIndex: 2,
-    orbitRadius: 6.4,
-    orbitSpeed: 0.26,
-    inclination: -0.16,
-    planetRadius: 0.32,
-    baseColor: "#34d399",
-    hexColor: 0x34d399,
-    hasMoon: true,
-    tagline: "Transforms complex architectures into parallel, verified engineering tasks.",
+  {
+    key: "architecture_validator",
+    name: "Architecture Validator",
+    shortName: "Arch Validator",
+    kind: "Rule-based",
+    celestialRole: "Moon of Architect · Pattern Defense",
+    orbitRadius: 6.2, // Parent planet orbit
+    orbitSpeed: 0.32,
+    inclination: -0.14,
+    radius: 0.22,
+    baseColor: "#0284c7",
+    hexColor: 0x0284c7,
+    parentPlanetKey: "architect",
+    moonOrbitRadius: 0.95,
+    moonOrbitSpeed: 2.2,
+    reportSummary:
+      "Rejects designs containing forbidden patterns. A retry router allows up to 3 attempts, after which the run is aborted.",
     responsibilities: [
-      "Parses architectural blueprints into atomic, dependency-ordered work units.",
-      "Sets precise acceptance criteria and file boundaries for each task.",
-      "Controls the iteration loop, retry logic, and fallback pathways.",
-      "Determines when code generation has satisfied all project requirements.",
+      "Inspects the architecture blueprint using deterministic regex and pattern analysis.",
+      "Detects forbidden frameworks, unapproved databases, or missing mandatory sections.",
+      "Populates state['validation_errors'] with targeted guidance for the Architect.",
+      "Routes flow to retry loop (up to 3 times) or signals run abortion.",
     ],
-    inputs: ["Validated architecture blueprint", "System component contracts"],
-    outputs: ["tasks.json task queue", "Acceptance criteria", "Execution order DAG"],
-    langgraphRole: "Second node in LangGraph. Populates state['tasks'] and advances state['current_task_index'].",
+    inputs: ["state['architecture'] string"],
+    outputs: ["List of validation error strings (state['validation_errors'])"],
+    rulesAndGuards: [
+      "Enforces a hard limit of 3 retry attempts before marking the run as failed.",
+      "Zero LLM hallucination: 100% deterministic rule-based verification.",
+    ],
+    langgraphNode: "architect_agent -> architecture_validator -> architecture_retry_router.",
   },
-  developer: {
+  {
+    key: "task_planner",
+    name: "Task Planner",
+    shortName: "Task Planner",
+    kind: "LLM",
+    celestialRole: "Planet III · Task Decomposition",
+    orbitRadius: 8.8,
+    orbitSpeed: 0.24,
+    inclination: 0.18,
+    radius: 0.38,
+    baseColor: "#10b981",
+    hexColor: 0x10b981,
+    reportSummary:
+      "Converts the architecture into an ordered task list as strict JSON, checked against a schema.",
+    responsibilities: [
+      "Deconstructs validated architecture into atomic, sequential engineering tasks.",
+      "Orders tasks logically: Database -> Core Models -> Business Services -> API Routes -> Configuration.",
+      "Ensures each task operates on discrete file boundaries to prevent merge collisions.",
+      "Outputs strict JSON adhering to the Pydantic task planning schema.",
+    ],
+    inputs: ["Validated state['architecture'] blueprint"],
+    outputs: ["Ordered JSON array of engineering tasks (state['tasks'])"],
+    rulesAndGuards: [
+      "Must output strict JSON only, parsed directly into Pydantic models.",
+      "Every task must contain a clear title, description, and target files list.",
+    ],
+    langgraphNode: "architecture_validator (passed) -> task_planner.",
+  },
+  {
+    key: "task_validator",
+    name: "Task Validator",
+    shortName: "Task Validator",
+    kind: "Rule-based",
+    celestialRole: "Moon of Task Planner · Plan Verification",
+    orbitRadius: 8.8,
+    orbitSpeed: 0.24,
+    inclination: 0.18,
+    radius: 0.2,
+    baseColor: "#059669",
+    hexColor: 0x059669,
+    parentPlanetKey: "task_planner",
+    moonOrbitRadius: 0.85,
+    moonOrbitSpeed: 2.5,
+    reportSummary:
+      "Confirms the plan is non-empty and every task has a title and description.",
+    responsibilities: [
+      "Verifies the task list contains at least one actionable implementation task.",
+      "Checks that every task has non-empty titles, valid descriptions, and valid file targets.",
+      "Ensures dependency sequence integrity before code generation begins.",
+      "Guarantees the workflow never enters the developer loop with a hollow plan.",
+    ],
+    inputs: ["state['tasks'] list"],
+    outputs: ["Validation status verdict (task_validation_passed / failed)"],
+    rulesAndGuards: [
+      "Rejects any empty or malformed task specifications immediately.",
+      "100% deterministic rule-based verification.",
+    ],
+    langgraphNode: "task_planner -> task_validator -> developer_agent.",
+  },
+  {
     key: "developer",
     name: "Developer Agent",
-    callsign: "PLANET DEVELOPER · ORBIT III",
-    role: "Full-Stack Implementation & File Generation",
-    orbitIndex: 3,
-    orbitRadius: 8.8,
-    orbitSpeed: 0.17,
-    inclination: 0.22,
-    planetRadius: 0.44,
+    shortName: "Developer",
+    kind: "LLM",
+    celestialRole: "Planet IV · Code Implementation (Jovian Giant)",
+    orbitRadius: 11.6,
+    orbitSpeed: 0.18,
+    inclination: -0.22,
+    radius: 0.54,
+    baseColor: "#a855f7",
+    hexColor: 0xa855f7,
+    hasRing: true,
+    reportSummary:
+      "Generates code for one task at a time, reading existing workspace files, in a strict FILE...END_FILE format.",
+    responsibilities: [
+      "Executes the active task indicated by state['current_task_index'].",
+      "Reads all previously generated files in the workspace to maintain import and interface consistency.",
+      "Generates production code enclosed in strict `FILE: path` and `END_FILE` delimiter blocks.",
+      "Implements business logic, typing, error handling, and framework integration.",
+    ],
+    inputs: ["state['current_task']", "state['architecture']", "All current files in workspace"],
+    outputs: ["Raw source code blocks with FILE/END_FILE delimiters"],
+    rulesAndGuards: [
+      "Must generate complete file contents, never partial placeholders or comments like 'TODO'.",
+      "Operates incrementally, completing one task before advancing to the next.",
+    ],
+    langgraphNode: "task_validator -> developer_agent -> validator_agent.",
+  },
+  {
+    key: "code_validator",
+    name: "Code Validator",
+    shortName: "Code Validator",
+    kind: "Rule-based",
+    celestialRole: "Inner Moon of Developer · Syntax & Parser Gate",
+    orbitRadius: 11.6,
+    orbitSpeed: 0.18,
+    inclination: -0.22,
+    radius: 0.22,
+    baseColor: "#9333ea",
+    hexColor: 0x9333ea,
+    parentPlanetKey: "developer",
+    moonOrbitRadius: 1.1,
+    moonOrbitSpeed: 2.8,
+    reportSummary:
+      "Confirms that files were actually parsed from the developer output.",
+    responsibilities: [
+      "Parses the Developer Agent's raw LLM response using delimiter matchers.",
+      "Validates that at least one file was extracted with a non-empty relative path.",
+      "Checks for proper balanced `FILE:` and `END_FILE` tags.",
+      "Rejects empty or broken code responses before disk writing.",
+    ],
+    inputs: ["Raw LLM response string from Developer Agent"],
+    outputs: ["Parsed dictionary of file paths to content (state['files'])"],
+    rulesAndGuards: [
+      "Raises validation error if zero files could be parsed.",
+      "Guarantees only clean structured file dictionaries reach the filesystem.",
+    ],
+    langgraphNode: "developer_agent -> validator_agent -> artifact_writer.",
+  },
+  {
+    key: "artifact_writer",
+    name: "Artifact Writer",
+    shortName: "Artifact Writer",
+    kind: "File I/O",
+    celestialRole: "Outer Moon of Developer · Safe Disk Persistence",
+    orbitRadius: 11.6,
+    orbitSpeed: 0.18,
+    inclination: -0.22,
+    radius: 0.24,
     baseColor: "#c084fc",
     hexColor: 0xc084fc,
-    hasRing: true,
-    tagline: "Executes engineering tasks, writing production-grade source code.",
+    parentPlanetKey: "developer",
+    moonOrbitRadius: 1.7,
+    moonOrbitSpeed: 1.9,
+    reportSummary:
+      "Copies a base template and writes generated files to disk with path-traversal protection.",
     responsibilities: [
-      "Generates typed backend modules, database models, and service business logic.",
-      "Creates configuration manifests (pyproject.toml, requirements, environment templates).",
-      "Performs self-healing iterations when code validators flag syntax or import errors.",
-      "Maintains clean workspace file trees in isolated runtime directories.",
+      "Seeds the run workspace with clean starter templates.",
+      "Writes each generated file from state['files'] to disk under `backend/var/workspaces/<run-id>/`.",
+      "Enforces strict path-traversal protection (`../` prevention) to safeguard host filesystem.",
+      "Creates required parent directories automatically.",
     ],
-    inputs: ["Current task item", "Architecture contract", "Existing workspace file tree"],
-    outputs: ["Production source files (.py, .ts)", "Module configurations", "Directory structure"],
-    langgraphRole: "Iterative execution node. Writes to state['files'] until all tasks are complete.",
+    inputs: ["state['files'] dictionary", "Target run workspace path"],
+    outputs: ["Physical files and directories written to workspace disk"],
+    rulesAndGuards: [
+      "Rejects any file path escaping the sandbox workspace directory.",
+      "Atomic disk writes with UTF-8 encoding.",
+    ],
+    langgraphNode: "validator_agent -> artifact_writer -> artifact_validator.",
   },
-  tester: {
+  {
+    key: "artifact_validator",
+    name: "Artifact Validator",
+    shortName: "Artifact Validator",
+    kind: "Rule-based",
+    celestialRole: "Planet V · Disk Integrity Check",
+    orbitRadius: 14.6,
+    orbitSpeed: 0.13,
+    inclination: 0.14,
+    radius: 0.35,
+    baseColor: "#94a3b8",
+    hexColor: 0x94a3b8,
+    reportSummary:
+      "Checks that every written file exists and is not empty.",
+    responsibilities: [
+      "Scans the physical workspace directory on disk after Artifact Writer finishes.",
+      "Confirms every declared file path physically exists.",
+      "Verifies that file sizes exceed zero bytes.",
+      "Ensures no disk write corruption occurred before testing starts.",
+    ],
+    inputs: ["Physical workspace directory on disk"],
+    outputs: ["Artifact validation status (verified / missing_files)"],
+    rulesAndGuards: [
+      "Zero tolerance for zero-byte empty files.",
+      "100% deterministic filesystem check.",
+    ],
+    langgraphNode: "artifact_writer -> artifact_validator -> tester_agent.",
+  },
+  {
     key: "tester",
     name: "Tester Agent",
-    callsign: "PLANET TESTER · ORBIT IV",
-    role: "Automated Test Suite Generation & Verification",
-    orbitIndex: 4,
-    orbitRadius: 11.2,
-    orbitSpeed: 0.11,
-    inclination: -0.09,
-    planetRadius: 0.38,
-    baseColor: "#fbbf24",
-    hexColor: 0xfbbf24,
-    hasRing: false,
-    tagline: "Ensures defect-free software by synthesizing and executing comprehensive test suites.",
+    shortName: "Tester",
+    kind: "Subprocess",
+    celestialRole: "Planet VI · Automated Verification & Pytest",
+    orbitRadius: 17.6,
+    orbitSpeed: 0.09,
+    inclination: -0.16,
+    radius: 0.44,
+    baseColor: "#f59e0b",
+    hexColor: 0xf59e0b,
+    reportSummary:
+      "Runs pytest inside the Docker sandbox and categorises any failure.",
     responsibilities: [
-      "Synthesizes exhaustive pytest suites testing happy paths, edge cases, and error branches.",
-      "Executes tests inside sandboxed environments and captures stdout/stderr execution traces.",
-      "Analyzes failure traces to diagnose root causes and reports fixes back to the Developer.",
-      "Enforces the final quality gate before human-in-the-loop review.",
+      "Executes `pytest` suites inside an isolated runtime sandbox.",
+      "Captures standard output, error streams, and assertion failure logs.",
+      "Categorizes test failures: Syntax, Import, Assertion, or Timeout.",
+      "Records granular test statistics into state['test_results'].",
     ],
-    inputs: ["Generated source code", "Component contracts", "Task requirements"],
-    outputs: ["test_*.py test suites", "Pytest execution metrics", "Diagnostic trace logs"],
-    langgraphRole: "Quality verification node. Populates state['test_results'] and gates run completion.",
+    inputs: ["Written workspace containing application and test files"],
+    outputs: ["Test results dictionary (passed, failed, logs, failure_category)"],
+    rulesAndGuards: [
+      "Runs isolated with subprocess timeout protection.",
+      "Graceful fallback if Docker daemon is not active on host.",
+    ],
+    langgraphNode: "artifact_validator -> tester_agent -> task_progression.",
   },
-};
+  {
+    key: "task_progression",
+    name: "Task Progression",
+    shortName: "Progression",
+    kind: "State Router",
+    celestialRole: "Orbital Gateway Station · State Loop & Completion",
+    orbitRadius: 17.6,
+    orbitSpeed: 0.09,
+    inclination: -0.16,
+    radius: 0.22,
+    baseColor: "#d97706",
+    hexColor: 0xd97706,
+    parentPlanetKey: "tester",
+    moonOrbitRadius: 1.1,
+    moonOrbitSpeed: 2.4,
+    reportSummary:
+      "Advances to the next task index or signals full run completion.",
+    responsibilities: [
+      "Evaluates whether all tasks in state['tasks'] have been completed.",
+      "If more tasks remain, increments `current_task_index` and loops back to Developer Agent.",
+      "If all tasks are finished and tests pass, marks workflow as `completed`.",
+      "Unlocks the human-in-the-loop change approval gate.",
+    ],
+    inputs: ["state['current_task_index']", "state['tasks']", "state['test_results']"],
+    outputs: ["Updated task pointer or END of LangGraph state machine"],
+    rulesAndGuards: [
+      "Enforces MAX_ITERATIONS safety limit to prevent infinite loops.",
+      "Gates the final change approval UI.",
+    ],
+    langgraphNode: "tester_agent -> task_progression -> (developer_agent OR END).",
+  },
+];
+
+// Helper: generate procedural planet textures on canvas
+function createProceduralPlanetTexture(colorHex: number, type: "bands" | "spots" | "crater"): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  const baseCol = new THREE.Color(colorHex);
+  const darkCol = baseCol.clone().multiplyScalar(0.5);
+  const lightCol = baseCol.clone().lerp(new THREE.Color(0xffffff), 0.3);
+
+  ctx.fillStyle = `#${baseCol.getHexString()}`;
+  ctx.fillRect(0, 0, 512, 256);
+
+  if (type === "bands") {
+    // Gas giant horizontal atmospheric bands
+    for (let i = 0; i < 20; i++) {
+      const y = Math.random() * 256;
+      const h = Math.random() * 16 + 4;
+      ctx.fillStyle = Math.random() > 0.5 ? `#${darkCol.getHexString()}` : `#${lightCol.getHexString()}`;
+      ctx.globalAlpha = Math.random() * 0.4 + 0.1;
+      ctx.fillRect(0, y, 512, h);
+    }
+  } else {
+    // Spots / craters / continent patches
+    for (let i = 0; i < 40; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 256;
+      const r = Math.random() * 28 + 6;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = Math.random() > 0.5 ? `#${darkCol.getHexString()}` : `#${lightCol.getHexString()}`;
+      ctx.globalAlpha = Math.random() * 0.35 + 0.1;
+      ctx.fill();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
 
 interface SolarAgentSystemProps {
   onExploreWorkspace?: () => void;
@@ -131,14 +408,16 @@ interface SolarAgentSystemProps {
 
 export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<AgentPlanetInfo | null>(null);
+  const labelsContainerRef = useRef<HTMLDivElement | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<FullAgentInfo | null>(null);
   const [isSupported, setIsSupported] = useState(true);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    const labelsContainer = labelsContainerRef.current;
+    if (!container || !labelsContainer) return;
 
-    // Check WebGL availability
+    // WebGL support test
     const testCanvas = document.createElement("canvas");
     const gl =
       testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
@@ -150,15 +429,15 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     let width = container.clientWidth || window.innerWidth;
     let height = container.clientHeight || window.innerHeight;
 
-    // Scene & Deep Space Camera
+    // 1. Scene & Camera
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x090a0d, 0.025);
+    scene.fog = new THREE.FogExp2(0x090a0d, 0.016);
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200);
-    camera.position.set(0, 11, 20);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 300);
+    camera.position.set(0, 16, 32);
     camera.lookAt(0, 0, 0);
 
-    // Renderer
+    // 2. Renderer
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
@@ -167,230 +446,224 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
 
-    // 1. Ambient & Solar Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
-    scene.add(ambientLight);
+    // 3. OrbitControls (Smooth free camera orbit & zoom)
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 75;
+    controls.minDistance = 6;
+    controls.maxPolarAngle = Math.PI / 2 + 0.1; // Don't go deep below the plane
+    controls.autoRotate = false;
 
-    // Sun Point Light (illuminates the dark sides of planets realistically)
-    const sunLight = new THREE.PointLight(0xfff7ed, 4.5, 60, 0.8);
-    sunLight.position.set(0, 0, 0);
-    scene.add(sunLight);
-
-    // Secondary subtle fill light
-    const fillLight = new THREE.DirectionalLight(0x94a3b8, 0.4);
-    fillLight.position.set(0, 20, 10);
-    scene.add(fillLight);
-
-    // 2. Central Radiant Sun (The Orchestrator / State Machine Core)
+    // 4. Solar Centerpiece: The State Engine Sun
     const sunGroup = new THREE.Group();
     scene.add(sunGroup);
 
-    // Sun core mesh
-    const sunGeo = new THREE.SphereGeometry(1.4, 32, 32);
-    const sunMat = new THREE.MeshBasicMaterial({
-      color: 0xffedd5,
-    });
+    // Sun Photosphere Sphere
+    const sunGeo = new THREE.SphereGeometry(1.8, 48, 48);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xffedd5 });
     const sunMesh = new THREE.Mesh(sunGeo, sunMat);
     sunGroup.add(sunMesh);
 
-    // Sun Corona / Inner Glow
-    const coronaGeo = new THREE.SphereGeometry(1.65, 32, 32);
+    // Inner Corona Layer
+    const coronaGeo = new THREE.SphereGeometry(2.1, 32, 32);
     const coronaMat = new THREE.MeshBasicMaterial({
-      color: 0xfdba74,
+      color: 0xfb923c,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.38,
       side: THREE.BackSide,
     });
     const coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
     sunGroup.add(coronaMesh);
 
-    // Outer Solar Flare Ring
-    const flareGeo = new THREE.RingGeometry(1.6, 2.3, 64);
+    // Solar Flares Disk
+    const flareGeo = new THREE.RingGeometry(2.0, 3.2, 64);
     const flareMat = new THREE.MeshBasicMaterial({
       color: 0xffedd5,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.22,
       side: THREE.DoubleSide,
     });
     const flareMesh = new THREE.Mesh(flareGeo, flareMat);
     flareMesh.rotation.x = Math.PI / 2;
     sunGroup.add(flareMesh);
 
-    // 3. Stellar Dust / Cosmic Starfield (1,200 stars)
-    const starCount = 1200;
+    // Sun PointLight (Casts lighting onto all planets)
+    const sunPointLight = new THREE.PointLight(0xfff7ed, 5.0, 80, 0.7);
+    sunPointLight.position.set(0, 0, 0);
+    scene.add(sunPointLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.32);
+    scene.add(ambientLight);
+
+    // 5. Deep Space Starfield (1,600 stars)
+    const starCount = 1600;
     const starGeo = new THREE.BufferGeometry();
     const starPositions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
-      starPositions[i] = (Math.random() - 0.5) * 120;
-      starPositions[i + 1] = (Math.random() - 0.5) * 80;
-      starPositions[i + 2] = (Math.random() - 0.5) * 120;
+      starPositions[i] = (Math.random() - 0.5) * 160;
+      starPositions[i + 1] = (Math.random() - 0.5) * 100;
+      starPositions[i + 2] = (Math.random() - 0.5) * 160;
     }
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
     const starMat = new THREE.PointsMaterial({
       color: 0xffffff,
-      size: 0.05,
+      size: 0.055,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.6,
     });
-    const starField = new THREE.Points(starGeo, starMat);
-    scene.add(starField);
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
 
-    // 4. Planet Meshes & Orbits
-    const planetEntries = Object.values(AGENT_PLANETS);
-    const planetMeshes: Array<{
-      info: AgentPlanetInfo;
+    // 6. Spawn all 11 Agents (Planets & Companions)
+    const createdTextures: THREE.CanvasTexture[] = [];
+    const celestialBodies: Array<{
+      info: FullAgentInfo;
       mesh: THREE.Mesh;
       group: THREE.Group;
-      moon?: THREE.Mesh;
+      radius: number;
       currentAngle: number;
+      parentBody?: any;
     }> = [];
 
-    planetEntries.forEach((info) => {
-      // Orbital Elliptical Path (Hairline 3D Ring)
-      const orbitCurve = new THREE.EllipseCurve(
-        0,
-        0,
-        info.orbitRadius,
-        info.orbitRadius,
-        0,
-        2 * Math.PI,
-        false,
-        0,
-      );
-      const points = orbitCurve.getPoints(128);
-      const orbitGeo = new THREE.BufferGeometry().setFromPoints(
-        points.map((p) => new THREE.Vector3(p.x, 0, p.y)),
-      );
-      const orbitMat = new THREE.LineBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.08,
+    // Map to find parents for moons
+    const planetMap: Record<string, { group: THREE.Group }> = {};
+
+    ALL_AGENTS.forEach((agent) => {
+      const isMoon = Boolean(agent.parentPlanetKey);
+
+      // Create group
+      const group = new THREE.Group();
+
+      // Create procedural texture
+      const textureType = agent.hasRing ? "bands" : "spots";
+      const texture = createProceduralPlanetTexture(agent.hexColor, textureType);
+      createdTextures.push(texture);
+
+      // Material
+      const mat = new THREE.MeshStandardMaterial({
+        map: texture,
+        color: agent.hexColor,
+        roughness: 0.5,
+        metalness: 0.6,
+        emissive: agent.hexColor,
+        emissiveIntensity: isMoon ? 0.4 : 0.25,
       });
-      const orbitLine = new THREE.LineLoop(orbitGeo, orbitMat);
-      orbitLine.rotation.x = info.inclination;
-      scene.add(orbitLine);
 
-      // Planet Group
-      const planetGroup = new THREE.Group();
-      scene.add(planetGroup);
+      const geo = new THREE.SphereGeometry(agent.radius, 32, 32);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.userData = { agentKey: agent.key };
+      group.add(mesh);
 
-      // Planet Sphere
-      const pGeo = new THREE.SphereGeometry(info.planetRadius, 32, 32);
-      const pMat = new THREE.MeshStandardMaterial({
-        color: info.hexColor,
-        roughness: 0.45,
-        metalness: 0.7,
-        emissive: info.hexColor,
-        emissiveIntensity: 0.25,
-      });
-      const pMesh = new THREE.Mesh(pGeo, pMat);
-      pMesh.userData = { agentKey: info.key };
-      planetGroup.add(pMesh);
-
-      // Planetary Rings (e.g. Architect and Developer)
-      if (info.hasRing) {
-        const ringGeo = new THREE.RingGeometry(
-          info.planetRadius * 1.4,
-          info.planetRadius * 2.1,
-          32,
-        );
+      // Add planetary rings if applicable
+      if (agent.hasRing) {
+        const ringGeo = new THREE.RingGeometry(agent.radius * 1.4, agent.radius * 2.2, 32);
         const ringMat = new THREE.MeshBasicMaterial({
-          color: info.hexColor,
+          color: agent.hexColor,
           side: THREE.DoubleSide,
           transparent: true,
           opacity: 0.35,
         });
         const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = Math.PI / 2.5;
-        pMesh.add(ring);
+        ring.rotation.x = Math.PI / 2.4;
+        mesh.add(ring);
       }
 
-      // Moon Satellite (e.g. Tech Lead)
-      let moonMesh: THREE.Mesh | undefined;
-      if (info.hasMoon) {
-        const mGeo = new THREE.SphereGeometry(info.planetRadius * 0.28, 16, 16);
-        const mMat = new THREE.MeshStandardMaterial({
-          color: 0xe2e8f0,
-          roughness: 0.7,
-          metalness: 0.2,
+      if (!isMoon) {
+        // Orbit line
+        const orbitCurve = new THREE.EllipseCurve(
+          0,
+          0,
+          agent.orbitRadius,
+          agent.orbitRadius,
+          0,
+          2 * Math.PI,
+          false,
+          0,
+        );
+        const pts = orbitCurve.getPoints(128);
+        const orbitGeo = new THREE.BufferGeometry().setFromPoints(
+          pts.map((p) => new THREE.Vector3(p.x, 0, p.y)),
+        );
+        const orbitMat = new THREE.LineBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.07,
         });
-        moonMesh = new THREE.Mesh(mGeo, mMat);
-        moonMesh.position.set(info.planetRadius * 1.8, 0, 0);
-        planetGroup.add(moonMesh);
+        const orbitLine = new THREE.LineLoop(orbitGeo, orbitMat);
+        orbitLine.rotation.x = agent.inclination;
+        scene.add(orbitLine);
+
+        scene.add(group);
+        planetMap[agent.key] = { group };
+      } else {
+        // Moons/stations are attached to their parent planet group
+        const parent = planetMap[agent.parentPlanetKey!];
+        if (parent) {
+          parent.group.add(group);
+        } else {
+          scene.add(group);
+        }
       }
 
-      // Random starting angle for realistic asynchronicity
-      const startingAngle = (info.orbitIndex * Math.PI) / 2.2;
+      // Initial angle staggered for natural realism
+      const startAngle = Math.random() * Math.PI * 2;
 
-      planetMeshes.push({
-        info,
-        mesh: pMesh,
-        group: planetGroup,
-        moon: moonMesh,
-        currentAngle: startingAngle,
+      celestialBodies.push({
+        info: agent,
+        mesh,
+        group,
+        radius: agent.radius,
+        currentAngle: startAngle,
+        parentBody: agent.parentPlanetKey ? planetMap[agent.parentPlanetKey] : null,
       });
     });
 
-    // 5. Interactive Raycaster for CLICK Detection (NOT HOVER)
+    // 7. Click Detection via Raycaster (Distinguish Drag from Click)
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    let downPos = { x: 0, y: 0, time: 0 };
 
-    const getRelativePointer = (e: MouseEvent) => {
+    const handlePointerDown = (e: MouseEvent) => {
+      downPos = { x: e.clientX, y: e.clientY, time: Date.now() };
+    };
+
+    const handlePointerUp = (e: MouseEvent) => {
+      const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+      const elapsed = Date.now() - downPos.time;
+
+      // If user dragged to rotate camera, ignore click
+      if (dist > 6 || elapsed > 350) return;
+
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
-    };
 
-    // Pointer hover only checks if hovering to change cursor to pointer
-    const handlePointerMove = (e: MouseEvent) => {
-      getRelativePointer(e);
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(
-        planetMeshes.map((p) => p.mesh),
+        celestialBodies.map((b) => b.mesh),
         false,
       );
 
       if (hits.length > 0) {
-        container.style.cursor = "pointer";
-      } else {
-        container.style.cursor = "default";
-      }
-    };
-
-    // Pointer click opens the Agent Work Dossier
-    const handlePointerDown = (e: MouseEvent) => {
-      getRelativePointer(e);
-      raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects(
-        planetMeshes.map((p) => p.mesh),
-        false,
-      );
-
-      if (hits.length > 0) {
-        const key = hits[0].object.userData.agentKey as AgentKey;
-        if (key && AGENT_PLANETS[key]) {
-          setSelectedAgent(AGENT_PLANETS[key]);
+        const key = hits[0].object.userData.agentKey;
+        const target = ALL_AGENTS.find((a) => a.key === key);
+        if (target) {
+          setSelectedAgent(target);
         }
       }
     };
 
-    renderer.domElement.addEventListener("mousemove", handlePointerMove);
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+    renderer.domElement.addEventListener("pointerup", handlePointerUp);
 
-    // 6. Smooth Parallax & Orbit Animation Loop
+    // 8. Animation Loop
     let animationFrameId: number;
-    let clock = new THREE.Clock();
-
-    let mouseParallaxX = 0;
-    let mouseParallaxY = 0;
-    const handleWindowMouseMove = (e: MouseEvent) => {
-      mouseParallaxX = (e.clientX / window.innerWidth - 0.5) * 2;
-      mouseParallaxY = (e.clientY / window.innerHeight - 0.5) * 2;
-    };
-    window.addEventListener("mousemove", handleWindowMouseMove);
+    const clock = new THREE.Clock();
+    const tempVec = new THREE.Vector3();
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -398,56 +671,68 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
 
-      // Smooth camera subtle sway based on mouse
-      const targetCamX = mouseParallaxX * 2.5;
-      const targetCamY = 11 - mouseParallaxY * 1.5;
-      camera.position.x += (targetCamX - camera.position.x) * 0.03;
-      camera.position.y += (targetCamY - camera.position.y) * 0.03;
-      camera.lookAt(0, 0, 0);
+      controls.update();
 
-      // Rotate Sun Core
-      sunGroup.rotation.y += delta * 0.15;
-      coronaMesh.rotation.z += delta * 0.08;
-      flareMesh.rotation.z -= delta * 0.12;
+      // Rotate Sun Core and flares
+      sunGroup.rotation.y += delta * 0.12;
+      coronaMesh.rotation.z += delta * 0.05;
+      flareMesh.rotation.z -= delta * 0.08;
 
-      // Pulse sun light gently
-      const pulse = 4.2 + Math.sin(elapsed * 2.5) * 0.3;
-      sunLight.intensity = pulse;
+      // Orbit all celestial bodies asynchronously
+      celestialBodies.forEach((b) => {
+        if (!b.info.parentPlanetKey) {
+          // Major Planet
+          b.currentAngle += delta * b.info.orbitSpeed * 0.45;
+          const x = Math.cos(b.currentAngle) * b.info.orbitRadius;
+          const z = Math.sin(b.currentAngle) * b.info.orbitRadius;
+          const y = Math.sin(b.currentAngle) * Math.sin(b.info.inclination) * 2.2;
+          b.group.position.set(x, y, z);
+        } else {
+          // Moon / Satellite
+          const moonAngle = elapsed * (b.info.moonOrbitSpeed || 2.0) + b.currentAngle;
+          const dist = b.info.moonOrbitRadius || 1.2;
+          const mx = Math.cos(moonAngle) * dist;
+          const mz = Math.sin(moonAngle) * dist;
+          const my = Math.sin(moonAngle * 1.5) * 0.2;
+          b.group.position.set(mx, my, mz);
+        }
 
-      // Animate Planets independently along their asynchronous orbits
-      planetMeshes.forEach((item) => {
-        // Increment angle by its unique orbital velocity
-        item.currentAngle += delta * item.info.orbitSpeed * 0.35;
+        // Axial self-rotation
+        b.mesh.rotation.y += delta * 1.0;
+      });
 
-        // Position along elliptical inclined orbit
-        const x = Math.cos(item.currentAngle) * item.info.orbitRadius;
-        const z = Math.sin(item.currentAngle) * item.info.orbitRadius;
-        const y = Math.sin(item.currentAngle) * Math.sin(item.info.inclination) * 1.8;
+      // Update 2D Floating Name Labels (Direct DOM style translation, no React re-render)
+      celestialBodies.forEach((b) => {
+        const labelEl = document.getElementById(`label-${b.info.key}`);
+        if (!labelEl) return;
 
-        item.group.position.set(x, y, z);
+        b.mesh.getWorldPosition(tempVec);
+        tempVec.y -= b.radius * 1.4; // Position just below the planet
+        tempVec.project(camera);
 
-        // Axial self-rotation of the planet
-        item.mesh.rotation.y += delta * 0.8;
+        const inFront = tempVec.z < 1.0;
+        const screenX = (tempVec.x * 0.5 + 0.5) * width;
+        const screenY = (-tempVec.y * 0.5 + 0.5) * height;
 
-        // Orbiting moon if present
-        if (item.moon) {
-          const moonAngle = elapsed * 2.0;
-          const mx = Math.cos(moonAngle) * (item.info.planetRadius * 1.7);
-          const mz = Math.sin(moonAngle) * (item.info.planetRadius * 1.7);
-          item.moon.position.set(mx, 0, mz);
-          item.moon.rotation.y += delta;
+        if (inFront && screenX > -50 && screenX < width + 50 && screenY > -50 && screenY < height + 50) {
+          labelEl.style.transform = `translate3d(${screenX}px, ${screenY}px, 0)`;
+          labelEl.style.opacity = "1";
+          labelEl.style.display = "block";
+        } else {
+          labelEl.style.opacity = "0";
+          labelEl.style.display = "none";
         }
       });
 
-      // Slowly rotate celestial starfield
-      starField.rotation.y = elapsed * 0.008;
+      // Slowly rotate starfield
+      stars.rotation.y = elapsed * 0.005;
 
       renderer.render(scene, camera);
     };
 
     animate();
 
-    // 7. Responsive Resizer
+    // Resize handler
     const handleResize = () => {
       if (!container) return;
       width = container.clientWidth || window.innerWidth;
@@ -459,13 +744,13 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
     window.addEventListener("resize", handleResize);
 
-    // 8. Cleanup
+    // Cleanup
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("mousemove", handleWindowMouseMove);
-      renderer.domElement.removeEventListener("mousemove", handlePointerMove);
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+      controls.dispose();
 
       sunGeo.dispose();
       sunMat.dispose();
@@ -475,21 +760,14 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       flareMat.dispose();
       starGeo.dispose();
       starMat.dispose();
+      createdTextures.forEach((t) => t.dispose());
 
-      planetMeshes.forEach((item) => {
-        item.mesh.geometry.dispose();
-        if (Array.isArray(item.mesh.material)) {
-          item.mesh.material.forEach((m) => m.dispose());
+      celestialBodies.forEach((b) => {
+        b.mesh.geometry.dispose();
+        if (Array.isArray(b.mesh.material)) {
+          b.mesh.material.forEach((m) => m.dispose());
         } else {
-          item.mesh.material.dispose();
-        }
-        if (item.moon) {
-          item.moon.geometry.dispose();
-          if (Array.isArray(item.moon.material)) {
-            item.moon.material.forEach((m) => m.dispose());
-          } else {
-            item.moon.material.dispose();
-          }
+          b.mesh.material.dispose();
         }
       });
 
@@ -505,9 +783,9 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       {/* 3D WebGL Canvas (Covers entire screen) */}
       <div
         ref={containerRef}
-        className="absolute inset-0 h-full w-full"
+        className="absolute inset-0 h-full w-full cursor-grab active:cursor-grabbing"
         role="img"
-        aria-label="3D Solar System of CodeForge AI Agents"
+        aria-label="3D Solar System of all 11 CodeForge AI Agents"
       >
         {!isSupported && (
           <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-neutral-500">
@@ -516,80 +794,104 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         )}
       </div>
 
+      {/* Floating 2D Screen Space Labels Container (High performance, DOM-driven) */}
+      <div
+        ref={labelsContainerRef}
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
+        {ALL_AGENTS.map((agent) => (
+          <div
+            key={agent.key}
+            id={`label-${agent.key}`}
+            className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 will-change-transform"
+            style={{ display: "none", opacity: 0 }}
+          >
+            <div className="flex flex-col items-center">
+              <span
+                className="whitespace-nowrap rounded-md border border-white/[0.1] bg-[#0c0d12]/80 px-2 py-0.5 font-mono text-[10px] font-medium tracking-wide text-neutral-200 shadow-md backdrop-blur-md"
+                style={{ borderLeftColor: agent.baseColor, borderLeftWidth: "2px" }}
+              >
+                {agent.shortName}
+              </span>
+              <span className="text-[8px] font-mono text-neutral-500 uppercase tracking-tighter">
+                {agent.kind}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Top Floating Glass Header Overlay */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-6 lg:px-10">
         <div>
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
             <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
-              Solar Agent Architecture
+              Complete 11-Node Architecture
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            Autonomous Multi-Agent System
+            Solar Multi-Agent System
           </h1>
-          <p className="mt-1 max-w-lg text-xs leading-relaxed text-neutral-400">
-            The central state machine acts as the solar core. Specialized agents orbit as independent planetary nodes. Click any planet to inspect its full responsibilities and deliverables.
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-neutral-400">
+            Drag to orbit in 3D. Scroll to zoom. Click any planet or satellite to open its operational dossier and deliverable specs.
           </p>
         </div>
 
-        {/* Explore Button */}
+        {/* Scroll CTA Button */}
         {onExploreWorkspace && (
           <button
             type="button"
             onClick={onExploreWorkspace}
             className="pointer-events-auto hidden items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 py-2 text-xs font-medium text-white backdrop-blur-xl transition hover:border-white/30 hover:bg-white/[0.08] sm:inline-flex"
           >
-            Go to Projects Workspace ↓
+            Open Projects Workspace ↓
           </button>
         )}
       </div>
 
-      {/* Bottom Floating Glass Agent Legend / Direct Click Bar */}
-      <div className="pointer-events-auto absolute bottom-8 left-6 right-6 z-20 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/[0.08] bg-[#121318]/60 p-4 backdrop-blur-2xl shadow-2xl lg:left-10 lg:right-10">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-2 font-mono text-xs text-neutral-500">CLICK TO INSPECT:</span>
-          {Object.values(AGENT_PLANETS).map((planet) => (
+      {/* Bottom Floating Glass Legend of All 11 Agents */}
+      <div className="pointer-events-auto absolute bottom-6 left-6 right-6 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-[#121318]/70 p-3.5 backdrop-blur-2xl shadow-2xl lg:left-10 lg:right-10">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-2 font-mono text-[11px] text-neutral-500">
+            AGENTS (CLICK TO INSPECT):
+          </span>
+          {ALL_AGENTS.map((agent) => (
             <button
-              key={planet.key}
+              key={agent.key}
               type="button"
-              onClick={() => setSelectedAgent(planet)}
-              className="group flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-xs text-neutral-300 transition-all hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+              onClick={() => setSelectedAgent(agent)}
+              className="group flex items-center gap-1.5 rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-1 text-xs text-neutral-300 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
             >
               <span
-                className="h-2 w-2 rounded-full transition-transform group-hover:scale-125"
-                style={{ backgroundColor: planet.baseColor }}
+                className="h-1.5 w-1.5 rounded-full transition-transform group-hover:scale-125"
+                style={{ backgroundColor: agent.baseColor }}
               />
-              <span className="font-medium">{planet.name}</span>
+              <span className="font-medium text-[11px]">{agent.shortName}</span>
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-neutral-400">
-            Orbiting Asynchronously
-          </span>
-          {onExploreWorkspace && (
-            <button
-              type="button"
-              onClick={onExploreWorkspace}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white px-3 py-1 text-xs font-medium text-black transition hover:bg-neutral-200"
-            >
-              Open Workspace
-            </button>
-          )}
-        </div>
+        {onExploreWorkspace && (
+          <button
+            type="button"
+            onClick={onExploreWorkspace}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200"
+          >
+            Launch Workspace
+          </button>
+        )}
       </div>
 
       {/* Interactive Agent Work Modal (Opens when planet is CLICKED, not on hover) */}
       {selectedAgent && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="agent-modal-title"
         >
-          <div className="relative w-full max-w-2xl rounded-2xl border border-white/[0.12] bg-[#101116]/95 p-6 shadow-2xl backdrop-blur-2xl sm:p-8">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/[0.12] bg-[#101116]/95 p-6 shadow-2xl backdrop-blur-2xl sm:p-8">
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] pb-5">
               <div>
@@ -598,8 +900,11 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
                     className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: selectedAgent.baseColor }}
                   />
-                  <span className="font-mono text-xs tracking-wider text-neutral-400">
-                    {selectedAgent.callsign}
+                  <span className="font-mono text-xs tracking-wider text-neutral-400 uppercase">
+                    {selectedAgent.celestialRole}
+                  </span>
+                  <span className="rounded bg-white/[0.08] px-2 py-0.5 font-mono text-[10px] text-white">
+                    {selectedAgent.kind}
                   </span>
                 </div>
                 <h2
@@ -609,7 +914,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
                   {selectedAgent.name}
                 </h2>
                 <p className="mt-1 text-xs text-neutral-400 font-mono">
-                  {selectedAgent.role}
+                  {selectedAgent.reportSummary}
                 </p>
               </div>
 
@@ -626,20 +931,31 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
             {/* Modal Body */}
             <div className="mt-6 space-y-5 text-sm">
-              <p className="text-neutral-300 leading-relaxed font-normal">
-                {selectedAgent.tagline}
-              </p>
-
               {/* Responsibilities */}
               <div>
                 <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-400">
-                  Core Responsibilities
+                  Execution Responsibilities
                 </h3>
                 <ul className="mt-2 space-y-1.5 text-xs text-neutral-300">
                   {selectedAgent.responsibilities.map((resp, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <span className="text-neutral-500 font-mono">0{i + 1}.</span>
                       <span>{resp}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Rules and Guardrails */}
+              <div>
+                <h3 className="text-xs font-mono uppercase tracking-wider text-amber-400">
+                  Rules &amp; Guardrails
+                </h3>
+                <ul className="mt-2 space-y-1.5 text-xs text-neutral-300">
+                  {selectedAgent.rulesAndGuards.map((rule, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-amber-500 font-mono">!</span>
+                      <span>{rule}</span>
                     </li>
                   ))}
                 </ul>
@@ -663,7 +979,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
                 <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5">
                   <span className="block font-mono text-[11px] uppercase tracking-wider text-neutral-400">
-                    Deliverables & Artifacts
+                    Deliverables &amp; Artifacts
                   </span>
                   <ul className="mt-2 space-y-1 text-xs text-neutral-300">
                     {selectedAgent.outputs.map((out, i) => (
@@ -676,10 +992,10 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
                 </div>
               </div>
 
-              {/* LangGraph Role */}
+              {/* LangGraph State Machine Node */}
               <div className="rounded-xl border border-white/[0.06] bg-black/40 p-3 text-xs text-neutral-400">
                 <span className="font-mono text-white font-semibold">LangGraph State: </span>
-                {selectedAgent.langgraphRole}
+                {selectedAgent.langgraphNode}
               </div>
             </div>
 
