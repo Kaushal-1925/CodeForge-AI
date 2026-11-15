@@ -19,6 +19,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if(typeof window!=='undefined'){if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}`,
+          }}
+        />
+      </head>
       <body className="min-h-screen text-foreground antialiased">{children}</body>
     </html>
   );

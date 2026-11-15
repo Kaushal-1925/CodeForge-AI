@@ -73,7 +73,7 @@ export function AgentForgeScene({
     const gl =
       testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
     if (!gl) {
-      setIsSupported(false);
+      queueMicrotask(() => setIsSupported(false));
       return;
     }
 
@@ -283,7 +283,7 @@ export function AgentForgeScene({
 
     // Animation Loop
     let animationFrameId: number;
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
 
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
