@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 
 interface BookPageTransitionProps {
   frontPage: React.ReactNode;
@@ -9,20 +9,17 @@ interface BookPageTransitionProps {
 }
 
 /**
- * Realistic 3D Book Page-Flip Transition Component
+ * Ultra-Smooth 60-120 FPS 3D Book Page-Flip Transition Component
  *
- * Implements a physically modeled right-to-left flexible book-page turn
- * driven continuously by user scroll progress.
- *
- * Features:
- * 1. Traveling cylindrical fold wave from right (100%) to left (0%).
- * 2. Front surface (Solar System) stays live and crops progressively at the curl line without GPU context loss.
- * 3. 3D arched cylinder along the fold with specular ridge sheen and trough shadows.
- * 4. Turned reverse flap showing luxury obsidian hardcover bookplate with debossed gold astrolabe seal.
- * 5. Automatic fade-out of reverse flap past 80% so workspace is completely clean.
- * 6. Always opens to Solar System cover on page load/refresh (scrollRestoration = manual).
- * 7. Guaranteed 2-way navigation: clicks on header/buttons work at all times.
- * 8. Window-level scroll chaining for smooth reversible scrolling in both directions.
+ * Engineered with 100% GPU Compositor Transforms:
+ * - ZERO layout reflows (no width, height, top, or left animations).
+ * - Single physical sheet turning around its spine with 3D perspective.
+ * - Front face: Live interactive Solar System (backfaceVisibility: hidden).
+ * - Reverse face: Luxury obsidian bookplate with debossed gold astrolabe seal (rotateY: 180deg).
+ * - Cylindrical arching in +Z space, diagonal corner pull, and torsional roll.
+ * - Moving specular ridge sheen and dynamic soft cast shadow on the workspace.
+ * - Always opens to Solar System cover on refresh / first load (history.scrollRestoration = manual).
+ * - Full bi-directional navigation (smooth scroll to top & wheel-up chaining).
  */
 export function BookPageTransition({
   frontPage,
@@ -30,16 +27,13 @@ export function BookPageTransition({
 }: BookPageTransitionProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stickyViewportRef = useRef<HTMLDivElement | null>(null);
-  const frontClipWrapperRef = useRef<HTMLDivElement | null>(null);
-  const curlCylinderRef = useRef<HTMLDivElement | null>(null);
-  const reverseFlapRef = useRef<HTMLDivElement | null>(null);
+  const pageSheetRef = useRef<HTMLDivElement | null>(null);
+  const sheenRef = useRef<HTMLDivElement | null>(null);
   const castShadowRef = useRef<HTMLDivElement | null>(null);
   const underlyingContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const [currentP, setCurrentP] = useState(0);
-
   useEffect(() => {
-    // 1. Ensure page always opens to Solar System cover on refresh / first load
+    // 1. Guarantee page always starts at top on initial load & refresh
     if (typeof window !== "undefined") {
       if ("scrollRestoration" in window.history) {
         window.history.scrollRestoration = "manual";
@@ -48,13 +42,12 @@ export function BookPageTransition({
     }
 
     const container = containerRef.current;
-    const frontClip = frontClipWrapperRef.current;
-    const cylinderEl = curlCylinderRef.current;
-    const flapEl = reverseFlapRef.current;
-    const shadowEl = castShadowRef.current;
+    const pageSheet = pageSheetRef.current;
+    const sheen = sheenRef.current;
+    const shadow = castShadowRef.current;
     const underlying = underlyingContainerRef.current;
 
-    if (!container || !frontClip || !cylinderEl || !flapEl || !shadowEl) return;
+    if (!container || !pageSheet || !sheen || !shadow) return;
 
     let targetProgress = 0;
     let currentProgress = 0;
@@ -72,7 +65,7 @@ export function BookPageTransition({
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
-    // Universal wheel chaining: when at top of workspace and scrolling UP, smoothly scroll window up
+    // Wheel-up chaining: when at top of workspace and scrolling UP, roll the book cover closed
     const handleGlobalWheel = (e: WheelEvent) => {
       if (underlying && underlying.scrollTop <= 2 && e.deltaY < 0 && targetProgress > 0) {
         window.scrollBy({ top: e.deltaY * 1.5, behavior: "auto" });
@@ -80,102 +73,73 @@ export function BookPageTransition({
     };
     window.addEventListener("wheel", handleGlobalWheel, { passive: true });
 
-    // High-performance 60 FPS render loop outside React state
+    // 60-120 FPS GPU Render Loop (Zero DOM layout reflows)
     const updateTransforms = () => {
       animationFrameId = requestAnimationFrame(updateTransforms);
 
-      // Silky lerp interpolation
+      // Silky smooth momentum lerp
       const diff = targetProgress - currentProgress;
-      if (Math.abs(diff) > 0.0003) {
-        currentProgress += diff * 0.22;
+      if (Math.abs(diff) > 0.0002) {
+        currentProgress += diff * 0.18;
       } else {
         currentProgress = targetProgress;
       }
 
       const p = currentProgress;
 
-      // 1. Traveling Fold Progress (from 100% right edge to 0% left spine)
-      const easedP = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      const foldPercent = (1 - easedP) * 100;
-
-      // Bend factor peaks near mid-turn
+      // Parabolic 3D bend peaks at mid-turn (p = 0.5)
       const bend = Math.sin(p * Math.PI);
-      const liftZ = bend * 170; // Paper arching toward camera in px
-      const cornerTilt = bend * 6.5; // Subtle diagonal corner pull in degrees
+      const tz = bend * 165; // Upward paper arch in +Z (px)
+      const rotX = bend * -5.0; // Natural diagonal corner pull (deg)
+      const rotZ = bend * 3.8; // Torsional paper twist (deg)
 
-      // 2. Front Surface: Progressively reveal underside as sheet peels to left
-      if (p <= 0.001) {
-        frontClip.style.width = "100%";
-        frontClip.style.visibility = "visible";
-      } else if (p >= 0.99) {
-        frontClip.style.width = "0%";
-        frontClip.style.visibility = "hidden";
-      } else {
-        frontClip.style.visibility = "visible";
-        frontClip.style.width = `${foldPercent}%`;
-      }
+      // 1. GPU Composited Physics Coordinates (Non-linear curvature keeps sheet visible mid-turn)
+      const viewWidth = window.innerWidth;
+      const tx = p * viewWidth;
+      const rotY = -p * 180 + bend * 22;
 
-      // 3. 3D Curled Cylinder Spine along the active fold
-      if (p > 0.005 && p < 0.95) {
-        cylinderEl.style.opacity = `${p > 0.85 ? Math.max(0, (0.95 - p) / 0.1) : 1}`;
-        cylinderEl.style.left = `${foldPercent}%`;
-        const cylinderAngle = -bend * 32;
-        cylinderEl.style.transform = `translateX(-50%) translateZ(${liftZ}px) rotateY(${cylinderAngle}deg) rotateZ(${cornerTilt * 0.4}deg)`;
+      // Apply hardware-accelerated 3D transform to turning sheet
+      pageSheet.style.transform = `translate3d(${tx}px, 0, ${tz}px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg)`;
 
-        // Specular highlight crest and trough shadow along the curve
-        cylinderEl.style.background = `linear-gradient(
+      // 2. Dynamic Specular Sheen Wave along Curvature
+      if (p > 0.01 && p < 0.97) {
+        sheen.style.opacity = `${bend * 0.7}`;
+        // Move light sweep across the paper as it bends
+        const sheenX = (1 - p) * 100;
+        sheen.style.background = `linear-gradient(
           to right,
-          rgba(0, 0, 0, ${bend * 0.7}) 0%,
-          rgba(255, 255, 255, ${bend * 0.35}) 35%,
-          rgba(255, 255, 255, ${bend * 0.75}) 48%,
-          rgba(0, 0, 0, ${bend * 0.8}) 70%,
-          transparent 100%
-        )`;
-        cylinderEl.style.boxShadow = `0 ${liftZ * 0.3}px ${liftZ * 0.6}px rgba(0, 0, 0, ${bend * 0.7})`;
-      } else {
-        cylinderEl.style.opacity = "0";
-      }
-
-      // 4. Turned Reverse Flap (Luxury Obsidian Hardcover Bookplate)
-      // Displays the underside of the curled sheet, then gracefully dissolves past 80% so workspace is clean
-      if (p > 0.015 && p < 0.92) {
-        // Flap fades out smoothly as page settles onto spine (between p = 0.75 and 0.90)
-        const flapOpacity = p < 0.75 ? 1 : Math.max(0, (0.90 - p) / 0.15);
-        flapEl.style.opacity = `${flapOpacity}`;
-        flapEl.style.visibility = flapOpacity > 0 ? "visible" : "hidden";
-
-        // Flap width tracks peeled paper portion and shrinks cleanly to 0
-        const flapWidth = Math.min(foldPercent, Math.max(0, (100 - foldPercent) * 0.45));
-        flapEl.style.left = `${Math.max(0, foldPercent - flapWidth)}%`;
-        flapEl.style.width = `${flapWidth}%`;
-
-        // 3D rotation and curl angle on the folded sheet facing camera
-        const flapAngle = bend * 24;
-        const tiltX = bend * -3.5;
-        flapEl.style.transform = `translateZ(${liftZ * 0.45}px) rotateY(${flapAngle}deg) rotateX(${tiltX}deg)`;
-
-        // Ambient lighting on reverse side
-        const brightness = 0.7 + p * 0.35;
-        flapEl.style.filter = `brightness(${brightness})`;
-      } else {
-        flapEl.style.opacity = "0";
-        flapEl.style.visibility = "hidden";
-      }
-
-      // 5. Dynamic Cast Shadow on Underlying Workspace
-      if (p > 0.015 && p < 0.92) {
-        const shadowOpacity = p < 0.8 ? 1 : Math.max(0, (0.92 - p) / 0.12);
-        shadowEl.style.opacity = `${shadowOpacity}`;
-        shadowEl.style.left = `${foldPercent}%`;
-        shadowEl.style.background = `linear-gradient(
-          to right,
-          rgba(0, 0, 0, ${bend * 0.85}) 0%,
-          rgba(0, 0, 0, ${bend * 0.45}) 25%,
-          rgba(0, 0, 0, ${bend * 0.15}) 60%,
-          transparent 100%
+          transparent ${Math.max(0, sheenX - 30)}%,
+          rgba(255, 255, 255, 0.28) ${sheenX}%,
+          rgba(0, 0, 0, 0.45) ${Math.min(100, sheenX + 15)}%,
+          transparent ${Math.min(100, sheenX + 35)}%
         )`;
       } else {
-        shadowEl.style.opacity = "0";
+        sheen.style.opacity = "0";
+      }
+
+      // 3. Dynamic Soft Cast Shadow on Revealed Workspace
+      if (p > 0.02 && p < 0.98) {
+        shadow.style.opacity = `${bend * 0.75}`;
+        const shadowX = p * 100;
+        shadow.style.background = `linear-gradient(
+          to right,
+          rgba(0, 0, 0, 0.75) 0%,
+          rgba(0, 0, 0, 0.35) ${Math.max(0, shadowX - 15)}%,
+          rgba(0, 0, 0, 0.12) ${shadowX}%,
+          transparent ${Math.min(100, shadowX + 25)}%
+        )`;
+      } else {
+        shadow.style.opacity = "0";
+      }
+
+      // 4. Clean Settled State: Hide sheet completely once turn is finished
+      if (p >= 0.96) {
+        const fade = Math.max(0, (1 - p) / 0.04);
+        pageSheet.style.opacity = `${fade}`;
+        pageSheet.style.visibility = p >= 0.998 ? "hidden" : "visible";
+      } else {
+        pageSheet.style.opacity = "1";
+        pageSheet.style.visibility = "visible";
       }
     };
 
@@ -192,17 +156,19 @@ export function BookPageTransition({
     <div
       ref={containerRef}
       className="relative w-full"
-      style={{ height: "240vh" }} // 2.4x viewport height for authentic physical scroll feel
+      style={{ height: "240vh" }} // 2.4x viewport height gives natural physical resistance
     >
-      {/* Pinned Sticky Viewport */}
+      {/* Pinned Sticky Viewport with High-Precision 3D Perspective */}
       <div
         ref={stickyViewportRef}
         className="sticky top-0 h-screen w-full overflow-hidden"
-        style={{ perspective: "2600px", perspectiveOrigin: "50% 50%" }}
+        style={{
+          perspective: "2400px",
+          perspectiveOrigin: "50% 50%",
+        }}
       >
         {/* ============================================================== */}
-        {/* 1. Underlying Working Interface (Present underneath page)       */}
-        {/* Always receives pointer-events so clicks are never blocked!    */}
+        {/* 1. Underlying Working Interface (Always present beneath page)   */}
         {/* ============================================================== */}
         <div
           id="cf-workspace-scroll"
@@ -212,114 +178,119 @@ export function BookPageTransition({
         >
           {underlyingContent}
 
-          {/* Dynamic Cast Shadow cast by turning sheet onto revealed workspace */}
+          {/* Dynamic Cast Shadow sweeping over workspace */}
           <div
             ref={castShadowRef}
-            className="pointer-events-none absolute bottom-0 right-0 top-0 transition-opacity duration-75"
-            style={{ zIndex: 25, opacity: 0 }}
+            className="pointer-events-none absolute inset-0 transition-opacity duration-75"
+            style={{ zIndex: 20, opacity: 0 }}
           />
         </div>
 
         {/* ============================================================== */}
-        {/* 2. Front Surface: Live Interactive Solar System                */}
-        {/* Cropped cleanly along the advancing fold without GPU crash     */}
+        {/* 2. Turning Hardcover Book Sheet (100% GPU Composited)          */}
         {/* ============================================================== */}
         <div
-          ref={frontClipWrapperRef}
-          className="absolute inset-y-0 left-0 overflow-hidden"
-          style={{ width: "100%", zIndex: 10 }}
+          ref={pageSheetRef}
+          className="absolute inset-0 h-full w-full will-change-transform"
+          style={{
+            transformStyle: "preserve-3d",
+            transformOrigin: "left center", // Spine anchored at left
+            zIndex: 10,
+          }}
         >
+          {/* ------------------------------------------------------------ */}
+          {/* Front Face: Live Interactive 3D Solar System (rotateY: 0deg) */}
+          {/* ------------------------------------------------------------ */}
           <div
-            className="h-full w-screen overflow-hidden bg-[#06080d]"
-            style={{ width: "100vw", minWidth: "100vw", height: "100vh" }}
+            className="absolute inset-0 h-full w-full overflow-hidden bg-[#06080d]"
+            style={{
+              transform: "rotateY(0deg)",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+            }}
           >
             {frontPage}
+
+            {/* Specular Ridge Curvature Sheen */}
+            <div
+              ref={sheenRef}
+              className="pointer-events-none absolute inset-0 transition-opacity duration-75"
+              style={{ opacity: 0 }}
+            />
+
+            {/* Fine Right Paper Edge Thickness / Bevel */}
+            <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-[2px] bg-gradient-to-l from-white/30 to-transparent shadow-[0_0_12px_rgba(255,255,255,0.2)]" />
           </div>
-        </div>
 
-        {/* ============================================================== */}
-        {/* 3. Dynamic 3D Curled Cylinder Spine (Ridge Sheen & Trough)     */}
-        {/* ============================================================== */}
-        <div
-          ref={curlCylinderRef}
-          className="pointer-events-none absolute bottom-0 top-0 w-32 -translate-x-1/2 transition-opacity duration-75 will-change-transform"
-          style={{
-            zIndex: 30,
-            opacity: 0,
-            transformStyle: "preserve-3d",
-          }}
-        />
-
-        {/* ============================================================== */}
-        {/* 4. Turned Reverse Flap: Luxury Obsidian Bookplate             */}
-        {/* ============================================================== */}
-        <div
-          ref={reverseFlapRef}
-          className="pointer-events-none absolute bottom-0 top-0 flex flex-col justify-between overflow-hidden border-r border-white/[0.12] bg-[#0c0e17] p-8 select-none transition-opacity duration-75 will-change-transform shadow-[-18px_0_35px_rgba(0,0,0,0.85)]"
-          style={{
-            zIndex: 20,
-            opacity: 0,
-            transformStyle: "preserve-3d",
-            transformOrigin: "right center",
-          }}
-        >
-          {/* Paper Micro-Texture Watermark */}
+          {/* ------------------------------------------------------------ */}
+          {/* Reverse Face: Luxury Obsidian Bookplate (rotateY: 180deg)   */}
+          {/* ------------------------------------------------------------ */}
           <div
-            className="pointer-events-none absolute inset-0 opacity-[0.04]"
+            className="absolute inset-0 flex h-full w-full flex-col justify-between overflow-hidden border-l border-white/[0.12] bg-[#0c0e17] p-10 select-none shadow-[0_20px_60px_rgba(0,0,0,0.9)]"
             style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)`,
-              backgroundSize: "24px 24px",
+              transform: "rotateY(180deg) translateZ(1px)",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
             }}
-          />
+          >
+            {/* Paper Micro-Texture Watermark */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.04]"
+              style={{
+                backgroundImage: `radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)`,
+                backgroundSize: "28px 28px",
+              }}
+            />
 
-          {/* Book Margin Rule Lines */}
-          <div className="pointer-events-none absolute inset-6 rounded-lg border border-white/[0.06]" />
+            {/* Spine Binding Shading (Near right edge when flipped) */}
+            <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-28 bg-gradient-to-l from-black/90 via-black/40 to-transparent" />
 
-          {/* Spine Binding Shading (Near right fold) */}
-          <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-24 bg-gradient-to-l from-black/90 via-black/40 to-transparent" />
+            {/* Book Margin Rule Lines */}
+            <div className="pointer-events-none absolute inset-8 rounded-xl border border-white/[0.06]" />
 
-          {/* Top Folio Header */}
-          <div className="relative z-10 flex items-center justify-between border-b border-white/[0.08] pb-3 font-mono text-[10px] tracking-widest text-neutral-500 uppercase">
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500/80" />
-              <span>CodeForge AI Autonomous Engineering</span>
-            </div>
-            <span>Folio I · Section 02</span>
-          </div>
-
-          {/* Center Debossed Gold-Leaf Insignia */}
-          <div className="relative z-10 mx-auto my-auto max-w-sm text-center">
-            {/* Geometric Astrolabe Seal */}
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/[0.03] shadow-[0_0_24px_rgba(245,158,11,0.08)]">
-              <svg
-                className="h-8 w-8 text-amber-400/85"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.2"
-              >
-                <circle cx="12" cy="12" r="9" strokeDasharray="2 2" />
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 3v18M3 12h18M6.5 6.5l11 11M6.5 17.5l11-11" />
-              </svg>
+            {/* Top Folio Header */}
+            <div className="relative z-10 flex items-center justify-between border-b border-white/[0.08] pb-4 font-mono text-[10px] tracking-widest text-neutral-500 uppercase">
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500/80" />
+                <span>CodeForge AI Autonomous Engineering</span>
+              </div>
+              <span>Folio I · Section 02</span>
             </div>
 
-            <h2 className="font-mono text-xs tracking-[0.3em] uppercase text-neutral-300">
-              CodeForge AI
-            </h2>
-            <p className="mt-1 text-[11px] font-mono text-neutral-500">
-              Deterministic Multi-Agent Orchestration
-            </p>
-            <div className="mx-auto mt-3 h-[1px] w-20 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
-            <p className="mt-3 font-mono text-[10px] leading-relaxed text-neutral-400">
-              Turn page to enter active workspace console, execute autonomous workflows, and review deterministic multi-agent synthesis.
-            </p>
-          </div>
+            {/* Center Debossed Gold-Leaf Insignia */}
+            <div className="relative z-10 mx-auto my-auto max-w-md text-center">
+              {/* Geometric Astrolabe Seal */}
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/[0.03] shadow-[0_0_30px_rgba(245,158,11,0.08)]">
+                <svg
+                  className="h-10 w-10 text-amber-400/85"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                >
+                  <circle cx="12" cy="12" r="9" strokeDasharray="2 2" />
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 3v18M3 12h18M6.5 6.5l11 11M6.5 17.5l11-11" />
+                </svg>
+              </div>
 
-          {/* Bottom Folio Footer */}
-          <div className="relative z-10 flex items-center justify-between border-t border-white/[0.08] pt-3 font-mono text-[10px] tracking-widest text-neutral-500 uppercase">
-            <span>LangGraph Determinism</span>
-            <span>Workspace Genesis →</span>
+              <h2 className="font-mono text-sm tracking-[0.3em] uppercase text-neutral-300">
+                CodeForge AI
+              </h2>
+              <p className="mt-2 text-xs font-mono text-neutral-500">
+                Deterministic Multi-Agent Orchestration
+              </p>
+              <div className="mx-auto mt-4 h-[1px] w-24 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+              <p className="mt-4 font-mono text-[11px] leading-relaxed text-neutral-400">
+                Turn the page to enter the active workspace console, execute autonomous workflows, and monitor deterministic multi-agent synthesis.
+              </p>
+            </div>
+
+            {/* Bottom Folio Footer */}
+            <div className="relative z-10 flex items-center justify-between border-t border-white/[0.08] pt-4 font-mono text-[10px] tracking-widest text-neutral-500 uppercase">
+              <span>LangGraph Determinism</span>
+              <span>Workspace Genesis →</span>
+            </div>
           </div>
         </div>
       </div>

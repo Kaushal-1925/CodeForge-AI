@@ -82,3 +82,8 @@ pre {
 a {
   color: inherit;
 }
+
+/* Suppress Next.js dev overlay indicator pill */
+nextjs-portal {
+  display: none !important;
+}
