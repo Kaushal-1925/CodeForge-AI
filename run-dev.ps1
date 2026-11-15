@@ -53,7 +53,7 @@ if (-not $BackendOnly) {
     Write-Host "    Dashboard will be available at: http://localhost:3000" -ForegroundColor Gray
 }
 
-Write-Host "`n[✓] Servers launched in separate terminal windows." -ForegroundColor Green
+Write-Host ""
+Write-Host "[OK] Servers launched in separate terminal windows." -ForegroundColor Green
 Write-Host "    - Dashboard: http://localhost:3000" -ForegroundColor Cyan
 Write-Host "    - API Docs:  http://127.0.0.1:8000/docs" -ForegroundColor Cyan
-
