@@ -50,6 +50,28 @@ def test_get_unknown_project_returns_404(client: TestClient) -> None:
     assert response.json() == {"detail": "Project not found"}
 
 
+def test_delete_project(client: TestClient) -> None:
+    create_response = client.post(
+        "/api/v1/projects",
+        json={"name": "Delete Me", "description": "To be deleted"},
+    )
+    assert create_response.status_code == 201
+    project_id = create_response.json()["id"]
+
+    delete_response = client.delete(f"/api/v1/projects/{project_id}")
+    assert delete_response.status_code == 204
+
+    get_response = client.get(f"/api/v1/projects/{project_id}")
+    assert get_response.status_code == 404
+
+
+def test_delete_unknown_project_returns_404(client: TestClient) -> None:
+    response = client.delete(f"/api/v1/projects/{uuid4()}")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Project not found"}
+
+
+
 def test_create_and_get_workflow_run(
     client: TestClient,
     monkeypatch: MonkeyPatch,

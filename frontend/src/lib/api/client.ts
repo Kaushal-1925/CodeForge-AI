@@ -63,6 +63,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError(detail ?? `Request failed with status ${response.status}`, response.status);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return (await response.json()) as T;
 }
 
@@ -91,6 +95,12 @@ export function listProjects(): Promise<Project[]> {
 
 export function getProject(projectId: string): Promise<Project> {
   return request<Project>(projectPath(projectId));
+}
+
+export function deleteProject(projectId: string): Promise<void> {
+  return request<void>(projectPath(projectId), {
+    method: "DELETE",
+  });
 }
 
 export function createWorkflowRun(
