@@ -475,7 +475,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     const sunMesh = new THREE.Mesh(sunGeo, sunMat);
     sunGroup.add(sunMesh);
 
-    // Inner Glowing Corona
+    // Inner Glowing Corona (Volumetric sphere, NO rings on the Sun)
     const coronaGeo = new THREE.SphereGeometry(2.35, 32, 32);
     const coronaMat = new THREE.MeshBasicMaterial({
       color: 0xf97316,
@@ -485,18 +485,6 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     });
     const coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
     sunGroup.add(coronaMesh);
-
-    // Outer Solar Flare Halo
-    const flareGeo = new THREE.RingGeometry(2.2, 3.4, 64);
-    const flareMat = new THREE.MeshBasicMaterial({
-      color: 0xffedd5,
-      transparent: true,
-      opacity: 0.2,
-      side: THREE.DoubleSide,
-    });
-    const flareMesh = new THREE.Mesh(flareGeo, flareMat);
-    flareMesh.rotation.x = Math.PI / 2;
-    sunGroup.add(flareMesh);
 
     // Dynamic Lighting
     const sunPointLight = new THREE.PointLight(0xfff7ed, 5.5, 100, 0.65);
@@ -555,10 +543,10 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       const orbitMat = new THREE.LineBasicMaterial({
         color: 0xffffff,
         transparent: true,
-        opacity: 0.09,
+        opacity: 0.12,
       });
       const orbitLine = new THREE.LineLoop(orbitGeo, orbitMat);
-      orbitLine.rotation.x = Math.PI / 2; // Flat circular plane
+      // Horizontal XZ orbit path - do not rotate so it matches horizontal circular planetary motion
       scene.add(orbitLine);
 
       // Planet Group
@@ -664,7 +652,6 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       // Rotate Sun Core
       sunGroup.rotation.y += delta * 0.12;
       coronaMesh.rotation.z += delta * 0.05;
-      flareMesh.rotation.z -= delta * 0.08;
 
       // Orbit all 11 planets CIRCULARLY on their OWN orbits around the Sun
       planetsList.forEach((p) => {
@@ -737,8 +724,6 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       sunMat.dispose();
       coronaGeo.dispose();
       coronaMat.dispose();
-      flareGeo.dispose();
-      flareMat.dispose();
       starGeo.dispose();
       starMat.dispose();
       createdTextures.forEach((t) => t.dispose());
