@@ -346,25 +346,39 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
     let width = container.clientWidth || window.innerWidth;
     let height = container.clientHeight || window.innerHeight;
 
-    // Detect if WebGL is available without crashing or showing blockers
+    // Detect if WebGL is genuinely available and able to render without D3D11 device loss
     let isWebGL = false;
     let renderer: THREE.WebGLRenderer | null = null;
     try {
-      const testCanvas = document.createElement("canvas");
-      const gl =
-        testCanvas.getContext("webgl2") ||
-        testCanvas.getContext("webgl") ||
-        testCanvas.getContext("experimental-webgl");
-      if (gl) {
-        renderer = new THREE.WebGLRenderer({
-          antialias: true,
-          alpha: false,
-          powerPreference: "default",
-          preserveDrawingBuffer: true,
-          failIfMajorPerformanceCaveat: false,
-        });
-        isWebGL = true;
+      const testRenderer = new THREE.WebGLRenderer({
+        antialias: false,
+        powerPreference: "default",
+        failIfMajorPerformanceCaveat: false,
+      });
+      const gl = testRenderer.getContext();
+      if (gl && !gl.isContextLost()) {
+        const testScene = new THREE.Scene();
+        const testCam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        const light = new THREE.PointLight(0xffffff, 1, 50);
+        light.castShadow = true;
+        testScene.add(light);
+        const testMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshStandardMaterial());
+        testScene.add(testMesh);
+        testRenderer.shadowMap.enabled = true;
+        testRenderer.render(testScene, testCam);
+
+        if (!gl.isContextLost()) {
+          renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: false,
+            powerPreference: "default",
+            preserveDrawingBuffer: true,
+            failIfMajorPerformanceCaveat: false,
+          });
+          isWebGL = Boolean(renderer && !renderer.getContext().isContextLost());
+        }
       }
+      testRenderer.dispose();
     } catch {
       isWebGL = false;
       renderer = null;
@@ -389,8 +403,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
       renderer.domElement.style.display = "block";
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.25;
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.shadowMap.enabled = false;
       container.appendChild(renderer.domElement);
 
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -436,7 +449,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
 
       const sunPointLight = new THREE.PointLight(0xfff7ed, 6.5, 180, 0.55);
       sunPointLight.position.set(0, 0, 0);
-      sunPointLight.castShadow = true;
+      sunPointLight.castShadow = false;
       scene.add(sunPointLight);
 
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.18);
