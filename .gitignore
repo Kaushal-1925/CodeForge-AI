@@ -47,9 +47,18 @@ pnpm-debug.log*
 postgres_data/
 
 # Editors and operating systems
+.kilo/
+*.db
+*.sqlite
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# Generated project reports
+*.pdf
+*Project_Report*
+*report*.md
+

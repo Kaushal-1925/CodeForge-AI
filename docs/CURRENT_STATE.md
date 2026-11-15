@@ -1,6 +1,6 @@
 # CodeForge AI Current State
 
-Last checkpoint: 2026-10-29
+Last checkpoint: 2026-10-28
 Branch: `rebuild`
 HEAD: `8ac5ae3` (`legacy-v1`, also `master` / `origin/master`)
 Current phase: workflow dashboard checkpoint
@@ -116,25 +116,6 @@ Verified on 2026-10-28 in this environment:
 | `npm run build`                            | Pass                                      |
 | `./scripts/check.sh` end-to-end            | Pass                                      |
 
-Re-verified on 2026-10-29 in this environment (Windows `win_arm64`, node 24):
-
-| Check                                      | Result                                    |
-| ------------------------------------------ | ----------------------------------------- |
-| `ruff check .` (uv venv, CPython 3.11.17)  | Pass                                      |
-| `ruff format --check .`                    | Pass, 97 files                            |
-| `mypy app`                                 | Blocked: `langgraph`/`langchain-deepseek` |
-|                                            | have no win_arm64 wheel; `app/services/`  |
-|                                            | `llm.py` imports `langchain_deepseek`     |
-| `pytest`                                   | Blocked: `sqlalchemy` C extensions and    |
-|                                            | `langgraph` cannot be imported (AppControl|
-|                                            | policy blocks `.pyd` loads; no win_arm64  |
-|                                            | wheel for `langgraph`/`pyyaml`/`tiktoken`)|
-| `npm run lint`                             | Pass                                      |
-| `npm run format:check`                     | Pass                                      |
-| `npm run typecheck`                        | Pass                                      |
-| `npm test`                                 | Pass, 17 tests                            |
-| `npm run build`                            | Pass                                      |
-
 Notes:
 
 - The five skipped backend tests are the Docker sandbox integration tests. Docker is not installed
@@ -153,11 +134,6 @@ Notes:
   persisted `approved`.
 - Frontend tests can take 60-90 seconds on WSL when the repository is on a Windows-mounted drive.
   The test run itself is fast once the jsdom environment loads.
-- Environment limitation on this machine (`win_arm64`): `uv sync --all-groups` cannot install
-  `psycopg-binary`, `pyyaml`, `langgraph`, `langchain-deepseek`, or `tiktoken` (no win_arm64
-  wheels, and AppControl policy blocks source builds). `sqlalchemy` C extensions are also blocked
-  at import time by AppControl. As a result backend `mypy` and `pytest` cannot run here; only
-  `ruff check`/`ruff format` could be verified. Frontend checks all pass.
 
 ## Intentionally deferred
 

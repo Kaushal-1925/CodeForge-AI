@@ -41,6 +41,13 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @field_validator("deepseek_api_key", mode="before")
+    @classmethod
+    def normalize_deepseek_api_key(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     @field_validator("api_v1_prefix")
     @classmethod
     def validate_api_prefix(cls, value: str) -> str:

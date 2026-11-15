@@ -3,35 +3,70 @@
 @tailwind utilities;
 
 :root {
-  --canvas: 222 47% 6%;
-  --surface: 222 35% 10%;
-  --border: 217 25% 20%;
-  --foreground: 210 40% 96%;
-  --muted: 215 20% 65%;
-  --accent: 199 89% 58%;
-  --success: 158 64% 52%;
-  --warning: 38 92% 60%;
-  --danger: 0 84% 65%;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  /* Minimalist obsidian & titanium palette */
+  --canvas: 240 10% 4%;       /* #090a0d - deep neutral void */
+  --surface: 240 6% 8%;       /* #131418 - dark glass ground */
+  --border: 240 5% 16%;       /* #27282e - subtle hairline separator */
+  --foreground: 0 0% 98%;     /* #fafafa - crisp, high-contrast white */
+  --muted: 240 5% 58%;        /* #91939d - calm architectural silver */
+  --accent: 217 91% 60%;      /* #3b82f6 - surgical precision blue */
+  --success: 152 57% 50%;     /* #34d399 - clean emerald */
+  --warning: 38 92% 50%;      /* #f59e0b - clean amber */
+  --danger: 0 72% 51%;        /* #ef4444 - clean crimson */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 }
 
 * {
   border-color: hsl(var(--border));
+  box-sizing: border-box;
 }
 
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, hsl(var(--accent) / 0.12), transparent 32rem),
-    radial-gradient(circle at bottom right, hsl(var(--success) / 0.08), transparent 28rem),
-    hsl(var(--canvas));
+  background-color: hsl(var(--canvas));
+  background-image: 
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 255, 255, 0.04), transparent 70%);
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism primitives */
+.glass-panel {
+  background: rgba(18, 19, 24, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 
+    0 24px 48px -12px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-subtle {
+  background: rgba(18, 19, 24, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-input {
+  background: rgba(12, 13, 17, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fafafa;
+  transition: all 0.15s ease-out;
+}
+
+.glass-input:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(14, 15, 20, 0.8);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
 }
 
 code,
@@ -40,7 +75,8 @@ pre {
 }
 
 ::selection {
-  background: hsl(var(--accent) / 0.35);
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
 a {
