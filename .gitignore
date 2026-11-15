@@ -56,3 +56,9 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Generated project reports
+*.pdf
+*Project_Report*
+*report*.md
+

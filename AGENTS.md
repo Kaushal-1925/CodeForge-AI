@@ -36,3 +36,4 @@ Whenever writing, reviewing, refactoring, or designing frontend and full-stack c
   - Use compound components, slot patterns, and children composition for flexible, reusable UI elements.
 - **React 19 Compatibility**:
   - Leverage modern React 19 hooks and patterns where applicable.
+
