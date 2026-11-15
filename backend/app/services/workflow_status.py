@@ -9,6 +9,7 @@ FAILURE_STATUSES = {
     "architecture_validation_failed",
     "max_architecture_retries_reached",
     "task_validation_failed",
+    "max_task_retries_reached",
     "validation_failed",
     "artifact_validation_failed",
     "tests_failed",

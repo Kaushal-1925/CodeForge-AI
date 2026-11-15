@@ -153,11 +153,13 @@ CODEFORGE PROJECT RULES
 
 3. Use PostgreSQL.
 
-4. Use the existing psycopg driver.
+4. Use the existing psycopg driver. NEVER use asyncpg.
 
-5. NEVER use SQLite.
+5. NEVER use SQLite in backend/app application code.
 
-6. NEVER create database.py.
+6. NEVER use python-dotenv.
+
+7. NEVER create database.py.
 
 7. NEVER create another SQLAlchemy Base.
 

@@ -27,14 +27,14 @@ def _pattern_is_affirmatively_used(text: str, pattern: str) -> bool:
 
         # Strip explicit negations including lists/conjunctions
         stripped_line = re.sub(
-            rf"\b(?:no|not|without|avoid|avoiding|never|do\s+not\s+(?:use|create|introduce))\s+(?:new\s+)?(?:[\w\.\/\-]+\s+(?:or|and|,)\s+)*{re.escape(pattern)}\b",
+            rf"\b(?:no|not|without|avoid|avoiding|never|do\s+not\s+(?:use|create|introduce)|instead\s+of|rather\s+than|not\s+using)\s+(?:new\s+)?(?:[\w\.\/\-]+\s+(?:or|and|,)\s+)*{re.escape(pattern)}\b",
             "",
             line_clean,
             flags=re.IGNORECASE,
         )
         # Strip parenthetical negations
         stripped_line = re.sub(
-            rf"\((?:no|not|without|avoid)\s+(?:new\s+)?(?:[\w\.\/\-]+\s+(?:or|and|,)\s+)*{re.escape(pattern)}\)",
+            rf"\((?:no|not|without|avoid|not\s+using|do\s+not\s+(?:use|create|introduce))\s+(?:new\s+)?(?:[\w\.\/\-]+\s+(?:or|and|,)\s+)*{re.escape(pattern)}\)",
             "",
             stripped_line,
             flags=re.IGNORECASE,

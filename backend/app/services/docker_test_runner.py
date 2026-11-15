@@ -100,7 +100,15 @@ def _run_tests_locally(
         test_target = workspace
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(test_target) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = (
+        str(test_target)
+        + os.pathsep
+        + str(workspace)
+        + os.pathsep
+        + env.get("PYTHONPATH", "")
+    )
+    if "DATABASE_URL" not in env:
+        env["DATABASE_URL"] = "postgresql+psycopg://codeforge:change-me@localhost:5432/codeforge"
 
     command = [
         sys.executable,

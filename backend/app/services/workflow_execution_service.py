@@ -85,6 +85,7 @@ def build_initial_state(
         "iteration": 0,
         "retry_count": 0,
         "architecture_retry_count": 0,
+        "task_retry_count": 0,
     }
 
 

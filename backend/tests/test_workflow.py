@@ -4,13 +4,17 @@ import app.graph.workflow as workflow_module
 from app.graph.workflow import (
     MAX_ARCHITECTURE_RETRIES,
     MAX_ITERATIONS,
+    MAX_TASK_RETRIES,
     architecture_retry_router,
     architecture_validation_agent,
     artifact_validation_agent,
     increment_architecture_retry,
     increment_iteration,
+    increment_task_retry,
     mark_architecture_max_retries_reached,
+    mark_task_max_retries_reached,
     task_progression_router,
+    task_retry_router,
     task_validation_agent,
     test_router,
     validation_router,
@@ -769,3 +773,58 @@ def test_mark_architecture_max_retries_reached():
 
     assert result["current_agent"] == "workflow"
     assert result["status"] == ("max_architecture_retries_reached")
+
+
+def test_task_retry_router_passes_when_tasks_are_valid():
+    state = {
+        "validation_errors": [],
+        "task_retry_count": 0,
+    }
+
+    assert task_retry_router(state) == "passed"
+
+
+def test_task_retry_router_retries_when_errors_exist():
+    state = {
+        "validation_errors": ["Task 1: asyncpg is not allowed."],
+        "task_retry_count": 1,
+    }
+
+    assert task_retry_router(state) == "retry"
+
+
+def test_task_retry_router_stops_at_max_retries():
+    state = {
+        "validation_errors": ["Task 1: asyncpg is not allowed."],
+        "task_retry_count": MAX_TASK_RETRIES,
+    }
+
+    assert task_retry_router(state) == "max_retries"
+
+
+def test_increment_task_retry():
+    state = {
+        "validation_errors": ["Invalid task"],
+        "task_retry_count": 0,
+        "current_agent": "task_validator",
+    }
+
+    result = increment_task_retry(state)
+
+    assert result["task_retry_count"] == 1
+    assert result["current_agent"] == "task_validator"
+
+
+def test_mark_task_max_retries_reached():
+    state = {
+        "validation_errors": ["Invalid task"],
+        "task_retry_count": MAX_TASK_RETRIES,
+        "current_agent": "task_validator",
+        "status": "task_validation_failed",
+    }
+
+    result = mark_task_max_retries_reached(state)
+
+    assert result["current_agent"] == "workflow"
+    assert result["status"] == "max_task_retries_reached"
+

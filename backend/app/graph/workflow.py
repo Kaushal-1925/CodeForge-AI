@@ -17,6 +17,7 @@ from app.services.task_validator import validate_tasks
 
 MAX_ITERATIONS = 5
 MAX_ARCHITECTURE_RETRIES = 3
+MAX_TASK_RETRIES = 3
 
 
 def validation_router(state: CodeForgeState) -> str:
@@ -86,6 +87,37 @@ def task_validation_agent(
         state["status"] = "task_validation_passed"
 
     return state
+
+
+def task_retry_router(
+    state: CodeForgeState,
+) -> str:
+    if not state.get("validation_errors"):
+        return "passed"
+
+    if state.get("task_retry_count", 0) >= MAX_TASK_RETRIES:
+        return "max_retries"
+
+    return "retry"
+
+
+def increment_task_retry(
+    state: CodeForgeState,
+) -> CodeForgeState:
+    state["task_retry_count"] = state.get("task_retry_count", 0) + 1
+    state["current_agent"] = "task_validator"
+
+    return state
+
+
+def mark_task_max_retries_reached(
+    state: CodeForgeState,
+) -> CodeForgeState:
+    state["current_agent"] = "workflow"
+    state["status"] = "max_task_retries_reached"
+
+    return state
+
 
 
 def artifact_validation_agent(
@@ -220,6 +252,16 @@ def build_graph() -> Any:
     )
 
     graph.add_node(
+        "task_retry",
+        increment_task_retry,
+    )
+
+    graph.add_node(
+        "max_task_retries_reached",
+        mark_task_max_retries_reached,
+    )
+
+    graph.add_node(
         "increment_iteration",
         increment_iteration,
     )
@@ -271,11 +313,22 @@ def build_graph() -> Any:
 
     graph.add_conditional_edges(
         "task_validator",
-        validation_router,
+        task_retry_router,
         {
             "passed": "developer",
-            "failed": END,
+            "retry": "task_retry",
+            "max_retries": "max_task_retries_reached",
         },
+    )
+
+    graph.add_edge(
+        "task_retry",
+        "task_planner",
+    )
+
+    graph.add_edge(
+        "max_task_retries_reached",
+        END,
     )
 
     graph.add_edge(
