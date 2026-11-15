@@ -13,15 +13,14 @@ if not exist ".env" (
 )
 
 echo [2/4] Launching FastAPI Backend (Port 8000)...
-where uv >nul 2>nul
-if %ERRORLEVEL% equ 0 (
-    start "CodeForge AI - Backend (Port 8000)" cmd /k "cd /d "%~dp0backend" && set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+if exist "%~dp0backend\.venv\Scripts\uvicorn.exe" (
+    start "CodeForge AI - Backend (Port 8000)" /D "%~dp0backend" cmd /k "set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db&& "%~dp0backend\.venv\Scripts\uvicorn.exe" app.main:app --reload --host 127.0.0.1 --port 8000"
 ) else (
-    start "CodeForge AI - Backend (Port 8000)" cmd /k "cd /d "%~dp0backend" && set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db && "%~dp0backend\.venv\Scripts\uvicorn.exe" app.main:app --reload --host 127.0.0.1 --port 8000"
+    start "CodeForge AI - Backend (Port 8000)" /D "%~dp0backend" cmd /k "set CODEFORGE_DATABASE_URL=sqlite:///./codeforge.db&& uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 )
 
 echo [3/4] Launching Next.js Frontend Dashboard (Port 3000)...
-start "CodeForge AI - Frontend (Port 3000)" cmd /k "cd /d "%~dp0frontend" && npm run dev -- --port 3000"
+start "CodeForge AI - Frontend (Port 3000)" /D "%~dp0frontend" cmd /k "npm run dev -- --port 3000"
 
 echo [4/4] Waiting for services to initialize...
 ping 127.0.0.1 -n 6 >nul
@@ -38,6 +37,6 @@ echo   - Backend Swagger:    http://127.0.0.1:8000/docs
 echo   - Health Endpoint:    http://127.0.0.1:8000/api/v1/health
 echo ===================================================
 echo.
-echo Leave this window open or close it when done.
+echo Leave this launcher open or close it when done.
 echo To stop services, close the Backend and Frontend command windows.
 pause

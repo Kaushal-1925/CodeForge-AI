@@ -65,7 +65,8 @@ def run_tests_in_docker(
             timeout=timeout_seconds,
         )
 
-        status = "passed" if result.returncode == 0 else "failed"
+        # Return code 0 = passed; 5 = no tests collected yet (intermediate tasks before test files)
+        status = "passed" if result.returncode in (0, 5) else "failed"
 
         return {
             "status": status,
@@ -120,7 +121,8 @@ def _run_tests_locally(
             timeout=timeout_seconds,
         )
 
-        status = "passed" if result.returncode == 0 else "failed"
+        # Return code 0 = passed; 5 = no tests collected yet (intermediate tasks before test files)
+        status = "passed" if result.returncode in (0, 5) else "failed"
 
         return {
             "status": status,
