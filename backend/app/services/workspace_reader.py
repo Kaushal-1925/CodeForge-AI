@@ -45,6 +45,6 @@ def read_workspace_files(
         except UnicodeDecodeError:
             continue
 
-        files[str(relative_path)] = content
+        files[relative_path.as_posix()] = content
 
     return files
