@@ -556,7 +556,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         );
         const pts = orbitCurve.getPoints(160);
         const orbitGeo = new THREE.BufferGeometry().setFromPoints(
-          pts.map((p) => new THREE.Vector3(p.x, 0, p.y)),
+          pts.map((p: THREE.Vector2) => new THREE.Vector3(p.x, 0, p.y)),
         );
         const orbitMat = new THREE.LineBasicMaterial({
           color: 0x94a3b8,
@@ -891,7 +891,7 @@ export function SolarAgentSystem({ onExploreWorkspace }: SolarAgentSystemProps) 
         planetsList.forEach((p) => {
           p.mesh.geometry.dispose();
           if (Array.isArray(p.mesh.material)) {
-            p.mesh.material.forEach((m) => m.dispose());
+            p.mesh.material.forEach((m: THREE.Material) => m.dispose());
           } else {
             p.mesh.material.dispose();
           }
