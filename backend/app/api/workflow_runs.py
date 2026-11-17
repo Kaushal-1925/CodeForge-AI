@@ -53,6 +53,11 @@ def create_workflow_run(
     background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
 ) -> WorkflowRun:
+    if run_data.api_key and run_data.api_key.strip():
+        from app.services.llm import set_runtime_api_key
+
+        set_runtime_api_key(run_data.api_key.strip())
+
     try:
         workflow_run = start_workflow_run(
             db=db,

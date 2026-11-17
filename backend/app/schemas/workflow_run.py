@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class WorkflowRunCreate(BaseModel):
     user_request: str = Field(min_length=1)
+    api_key: str | None = None
 
 
 class WorkflowRunApprovalUpdate(BaseModel):

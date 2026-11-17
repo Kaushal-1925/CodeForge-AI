@@ -31,8 +31,18 @@ interface NewRunFormProps {
 
 export function NewRunForm({ projectId, onCreated }: NewRunFormProps) {
   const [userRequest, setUserRequest] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useState(() => {
+    if (typeof window !== "undefined") {
+      const savedKey = localStorage.getItem("codeforge_deepseek_api_key");
+      if (savedKey) {
+        setApiKey(savedKey);
+      }
+    }
+  });
 
   function applyPrompt(prompt: string) {
     setUserRequest(prompt);
@@ -51,8 +61,14 @@ export function NewRunForm({ projectId, onCreated }: NewRunFormProps) {
     setError(null);
 
     try {
+      const trimmedKey = apiKey.trim();
+      if (trimmedKey && typeof window !== "undefined") {
+        localStorage.setItem("codeforge_deepseek_api_key", trimmedKey);
+      }
+
       const run = await createWorkflowRun(projectId, {
         user_request: trimmedRequest,
+        api_key: trimmedKey || undefined,
       });
 
       setUserRequest("");
@@ -99,6 +115,27 @@ export function NewRunForm({ projectId, onCreated }: NewRunFormProps) {
           placeholder="Build a REST API for tracking invoices with authentication and tests."
           disabled={submitting}
           required
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium uppercase tracking-wider text-neutral-400" htmlFor="apiKey">
+            DeepSeek API Key
+          </label>
+          <span className="text-[11px] text-neutral-500">
+            {apiKey.trim() ? "Active for this run" : "Optional if already in .env"}
+          </span>
+        </div>
+        <input
+          id="apiKey"
+          name="apiKey"
+          type="password"
+          className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/80 px-3 py-2 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-white/30 focus:ring-1 focus:ring-white/20"
+          value={apiKey}
+          onChange={(event) => setApiKey(event.target.value)}
+          placeholder="sk-... (paste key here or leave blank if configured in .env)"
+          disabled={submitting}
         />
       </div>
       {error && (

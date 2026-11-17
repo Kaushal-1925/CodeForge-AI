@@ -34,6 +34,7 @@ export interface WorkflowRun {
 
 export interface CreateWorkflowRunInput {
   user_request: string;
+  api_key?: string;
 }
 
 export interface ArtifactFile {

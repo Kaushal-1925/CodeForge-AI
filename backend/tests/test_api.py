@@ -125,6 +125,24 @@ def test_create_workflow_run_rejects_unknown_project(
     assert response.json() == {"detail": "Project not found"}
 
 
+def test_create_workflow_run_accepts_api_key(
+    client: TestClient,
+) -> None:
+    from app.services.llm import get_runtime_api_key, set_runtime_api_key
+
+    project = client.post("/api/v1/projects", json={"name": "Test Key Project"}).json()
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/runs",
+        json={
+            "user_request": "Build an app.",
+            "api_key": "sk-test-override-key",
+        },
+    )
+    assert response.status_code == 201
+    assert get_runtime_api_key() == "sk-test-override-key"
+    set_runtime_api_key(None)
+
+
 def test_workflow_run_is_scoped_to_project(
     client: TestClient,
     session_factory: sessionmaker[Session],
